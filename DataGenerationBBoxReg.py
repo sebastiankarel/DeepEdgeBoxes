@@ -7,7 +7,7 @@ import xml.etree.ElementTree as et
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, image_dir, label_dir, image_width, image_height, channels, batch_size):
+    def __init__(self, image_dir, label_dir, image_width, image_height, batch_size):
         self.batch_size = batch_size
         self.label_dir = label_dir
         labels = []
@@ -21,7 +21,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.image_dir = image_dir
         self.image_width = image_width
         self.image_height = image_height
-        self.channels = channels
+        self.channels = 1
         self.indexes = np.arange(len(self.labels))
         self.label_dim = 4
         self.on_epoch_end()
@@ -44,12 +44,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         y = np.empty((self.batch_size, self.label_dim))
         for i, f in enumerate(labels_temp):
             image = cv2.imread(os.path.join(self.image_dir, f + ".jpg"))
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             orig_width = float(image.shape[1])
             orig_height = float(image.shape[0])
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             image = np.array(cv2.resize(image, (self.image_width, self.image_height)), dtype=np.float)
             image = np.reshape(image, (image.shape[0], image.shape[1], 1))
-            image = image / 255.0
             x[i] = image
 
             tree = et.parse(os.path.join(self.label_dir, f + ".xml"))

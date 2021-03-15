@@ -9,98 +9,21 @@ import xml.etree.ElementTree as et
 from shutil import copyfile
 
 
-train_label_dir = "data/pascalvoc07/train/annotations"
-train_img_dir = "data/pascalvoc07/train/images"
-train_edge_img_dir = "data/pascalvoc07/train/edge_images"
-
-test_label_dir = "data/pascalvoc07/test/annotations"
-test_img_dir = "data/pascalvoc07/test/images"
-test_edge_img_dir = "data/pascalvoc07/test/edge_images"
-
-train_split_file = "data/pascalvoc07/train_split.txt"
-test_split_file = "data/pascalvoc07/test_split.txt"
-
-img_dir = "data/pascalvoc07/images_all"
-label_dir = "data/pascalvoc07/annotations_all"
-
-train_test_split = 0.8
-
-weight_file = "model_weights_canny.h5"
-
-img_width = 400
-img_height = 400
-img_channels = 1
-
-batch_size = 8
-epochs = 25
-
-
 class BoundingBoxRegression:
 
-    def create_data_split_files(self):
-        files = os.listdir(label_dir)
-        np.random.shuffle(files)
-        train_split = int(float(len(files)) * train_test_split)
-        train_files = files[0:train_split]
-        test_files = files[train_split:]
-        train_out = open(train_split_file, 'x')
-        for name in train_files:
-            train_out.write(name + "\n")
-        train_out.close()
-        test_out = open(test_split_file, 'x')
-        for name in test_files:
-            test_out.write(name + "\n")
-        test_out.close()
+    def __init__(self, dataset_dir):
+        self.train_img_dir = os.path.join(dataset_dir, "train/images")
+        self.train_label_dir = os.path.join(dataset_dir, "train/labels")
+        self.test_img_dir = os.path.join(dataset_dir, "test/images")
+        self.test_label_dir = os.path.join(dataset_dir, "test/labels")
+        self.img_width = 400
+        self.img_height = 400
+        self.batch_size = 8
+        self.epochs = 25
+        self.weight_file = "bbox_reg_weights.h5"
 
-
-    def create_data_from_split_files(self, max_objects=1):
-        hed = HED()
-        f_train = open(train_split_file, 'r')
-        files = f_train.readlines()
-        f_train.close()
-
-        for file_name in files:
-            file_name = file_name.strip()
-            tree = et.parse(os.path.join(label_dir, file_name))
-            root = tree.getroot()
-            count = 0
-            for bndbox in root.findall("./object/bndbox"):
-                count += 1
-            if count <= max_objects:
-                img_file = file_name.split(".")[0] + ".jpg"
-                if not os.path.isfile(os.path.join(train_edge_img_dir, img_file)):
-                    image = cv2.imread(os.path.join(img_dir, img_file))
-                    edge_image = hed.get_edge_image(image, image.shape[1], image.shape[0], False)
-                    cv2.imwrite(os.path.join(train_edge_img_dir, img_file), edge_image)
-                if not os.path.isfile(os.path.join(train_img_dir, img_file)):
-                    copyfile(os.path.join(img_dir, img_file), os.path.join(train_img_dir, img_file))
-                if not os.path.isfile(os.path.join(train_label_dir, file_name)):
-                    copyfile(os.path.join(label_dir, file_name), os.path.join(train_label_dir, file_name))
-
-        f_test = open(test_split_file, 'r')
-        files = f_test.readlines()
-        f_test.close()
-
-        for file_name in files:
-            file_name = file_name.strip()
-            tree = et.parse(os.path.join(label_dir, file_name))
-            root = tree.getroot()
-            count = 0
-            for bndbox in root.findall("./object/bndbox"):
-                count += 1
-            if count <= max_objects:
-                img_file = file_name.split(".")[0] + ".jpg"
-                if not os.path.isfile(os.path.join(test_edge_img_dir, img_file)):
-                    image = cv2.imread(os.path.join(img_dir, img_file))
-                    edge_image = hed.get_edge_image(image, image.shape[1], image.shape[0], False)
-                    cv2.imwrite(os.path.join(test_edge_img_dir, img_file), edge_image)
-                if not os.path.isfile(os.path.join(test_img_dir, img_file)):
-                    copyfile(os.path.join(img_dir, img_file), os.path.join(test_img_dir, img_file))
-                if not os.path.isfile(os.path.join(test_label_dir, file_name)):
-                    copyfile(os.path.join(label_dir, file_name), os.path.join(test_label_dir, file_name))
-
-
-    def get_regression_model(self):
+    @staticmethod
+    def __get_model():
         model = keras.models.Sequential()
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(img_height, img_width, img_channels)))
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
@@ -129,39 +52,35 @@ class BoundingBoxRegression:
         model.summary()
         return model
 
-
-    def train_regression_model(self, model, load_weights):
-        if load_weights:
-            if os.path.isfile(weight_file):
-                model.load_weights(weight_file)
+    def train_model(self, model):
         training_generator = DataGenerator(
-            train_img_dir,
-            train_label_dir,
-            img_width, img_height, img_channels, batch_size)
+            self.train_img_dir,
+            self.train_label_dir,
+            self.img_width, self.img_height, self.batch_size)
         test_generator = DataGenerator(
-            test_img_dir,
-            test_label_dir,
-            img_width, img_height, img_channels, batch_size)
+            self.test_img_dir,
+            self.test_label_dir,
+            self.img_width, self.img_height, self.batch_size)
         model.fit_generator(generator=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
-        model.save_weights(weight_file, overwrite=True)
+        model.save_weights(self.weight_file, overwrite=True)
 
-
-    def draw_prediction(self, model):
-        if os.path.isfile(weight_file):
-            model.load_weights(weight_file)
-            for file_name in os.listdir(test_label_dir):
+    def draw_predictions(self):
+        if os.path.isfile(self.weight_file):
+            model = self.__get_model()
+            model.load_weights(self.weight_file)
+            for file_name in os.listdir(self.test_label_dir):
                 img_file = file_name.split(".")[0] + ".jpg"
-                image = cv2.imread(os.path.join(test_img_dir, img_file))
-                image = cv2.resize(image, (img_width, img_height))
+                image = cv2.imread(os.path.join(self.test_img_dir, img_file))
+                image = cv2.resize(image, (self.img_width, self.img_height))
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 image = np.reshape(image, (image.shape[0], image.shape[1], 1))
                 image = image / 255.0
                 image = np.reshape(image, (1, image.shape[0], image.shape[1], image.shape[2]))
                 prediction = model.predict(image, 1)[0]
-                xmin = prediction[0] * float(img_width)
-                ymin = prediction[1] * float(img_height)
-                xmax = prediction[2] * float(img_width)
-                ymax = prediction[3] * float(img_height)
+                xmin = prediction[0] * float(self.img_width)
+                ymin = prediction[1] * float(self.img_height)
+                xmax = prediction[2] * float(self.img_width)
+                ymax = prediction[3] * float(self.img_height)
                 cv2.rectangle(image, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0, 255, 0), 2)
                 plt.imshow(image)
                 plt.show()
