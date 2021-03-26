@@ -7,22 +7,22 @@ import xml.etree.ElementTree as et
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, edge_image_dir, labels_dir, batch_size):
+    def __init__(self, edge_images_dir, labels_dir, batch_size, window_width, window_height):
         self.batch_size = batch_size
         self.labels_dir = labels_dir
         labels = []
         for file_name in os.listdir(labels_dir):
             file_name = file_name.split(".")[0]
-            if os.path.isfile(os.path.join(edge_image_dir, file_name + ".jpg")):
-                image = cv2.imread(os.path.join(edge_image_dir, file_name + ".jpg"))
+            if os.path.isfile(os.path.join(edge_images_dir, file_name + ".jpg")):
+                image = cv2.imread(os.path.join(edge_images_dir, file_name + ".jpg"))
                 if image is not None:
                     labels.append(file_name.split(".")[0])
         self.labels = labels
-        self.image_dir = edge_image_dir
+        self.images_dir = edge_images_dir
         self.indexes = np.arange(len(self.labels))
-        self.window_height = 400
-        self.window_width = 400
-        self.max_scale = 6
+        self.window_height = window_height
+        self.window_width = window_width
+        self.max_scale = 8
         self.on_epoch_end()
 
     def __getitem__(self, index):
@@ -46,7 +46,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             image_width = scale * self.window_width
             image_height = scale * self.window_height
 
-            image = cv2.imread(os.path.join(self.image_dir, f + ".jpg"))
+            image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = float(image.shape[1])
             orig_height = float(image.shape[0])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -63,7 +63,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
             root = tree.getroot()
-            max_inclusion = 0
             for bndbox in root.findall("./object/bndbox"):
                 xmin = int((float(bndbox.find('xmin').text) / orig_width) * float(image_width))
                 ymin = int((float(bndbox.find('ymin').text) / orig_height) * float(image_height))
@@ -73,9 +72,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 x_overlap = max(0, min(window_xmax, xmax) - max(window_xmin, xmin))
                 y_overlap = max(0, min(window_ymax, ymax) - max(window_ymin, ymin))
                 intersection = x_overlap * y_overlap
-                inclusion = float(intersection) / float(bbox_area)
-                if inclusion > max_inclusion:
-                    max_inclusion = inclusion
-            y[i] = max_inclusion
+
+            y[i] = 0.0
 
         return x, y

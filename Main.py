@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import tensorflow as tf
-
-
-dataset_dir = "data"
+from RegionProposal import RegionProposal
 
 
 def init_tf_gpu():
@@ -15,4 +13,7 @@ def init_tf_gpu():
 
 if __name__ == "__main__":
     init_tf_gpu()
+
+    reg_prop = RegionProposal(400, 400, "reg_prop_weights.h5")
+    reg_prop.train_model("data/train/labels/", "data/train/images", "data/test/labels", "data/test/images", 25, 8, False)
 
