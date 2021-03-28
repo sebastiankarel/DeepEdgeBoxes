@@ -3,22 +3,23 @@ import os
 import numpy as np
 import cv2
 import xml.etree.ElementTree as et
+import random
 
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, image_dir, label_dir, image_width, image_height, batch_size):
+    def __init__(self, edge_images_dir, labels_dir, batch_size, image_width, image_height):
         self.batch_size = batch_size
-        self.label_dir = label_dir
+        self.labels_dir = labels_dir
         labels = []
-        for file_name in os.listdir(label_dir):
+        for file_name in os.listdir(labels_dir):
             img_file = file_name.split(".")[0] + ".jpg"
-            if os.path.isfile(os.path.join(image_dir, img_file)):
-                image = cv2.imread(os.path.join(image_dir, img_file))
+            if os.path.isfile(os.path.join(edge_images_dir, img_file)):
+                image = cv2.imread(os.path.join(edge_images_dir, img_file))
                 if image is not None:
                     labels.append(file_name.split(".")[0])
         self.labels = labels
-        self.image_dir = image_dir
+        self.edge_images_dir = edge_images_dir
         self.image_width = image_width
         self.image_height = image_height
         self.channels = 1
@@ -43,21 +44,38 @@ class DataGenerator(tf.keras.utils.Sequence):
         x = np.empty((self.batch_size, self.image_height, self.image_width, self.channels))
         y = np.empty((self.batch_size, self.label_dim))
         for i, f in enumerate(labels_temp):
-            image = cv2.imread(os.path.join(self.image_dir, f + ".jpg"))
-            orig_width = float(image.shape[1])
-            orig_height = float(image.shape[0])
+            image = cv2.imread(os.path.join(self.edge_images_dir, f + ".jpg"))
+            orig_width = int(image.shape[1])
+            orig_height = int(image.shape[0])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            image = np.array(cv2.resize(image, (self.image_width, self.image_height)), dtype=np.float)
-            image = np.reshape(image, (image.shape[0], image.shape[1], 1))
-            x[i] = image
 
-            tree = et.parse(os.path.join(self.label_dir, f + ".xml"))
+            bboxes = []
+            tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
             root = tree.getroot()
             for bndbox in root.findall("./object/bndbox"):
-                xmin = float(bndbox.find('xmin').text) / orig_width
-                ymin = float(bndbox.find('ymin').text) / orig_height
-                xmax = float(bndbox.find('xmax').text) / orig_width
-                ymax = float(bndbox.find('ymax').text) / orig_height
-                y[i] = [xmin, ymin, xmax, ymax]
+                xmin = int(bndbox.find('xmin').text)
+                ymin = int(bndbox.find('ymin').text)
+                xmax = int(bndbox.find('xmax').text)
+                ymax = int(bndbox.find('ymax').text)
+                bboxes.append((xmin, ymin, xmax, ymax))
+            target_box = random.choice(bboxes)
+            window_xmin = np.random.randint(max(target_box[0] - 100, 0), target_box[0] + 1)
+            window_ymin = np.random.randint(max(target_box[1] - 100, 0), target_box[1] + 1)
+            window_xmax = np.random.randint(target_box[2], min(target_box[2] + 100, orig_width) + 1)
+            window_ymax = np.random.randint(target_box[3], min(target_box[3] + 100, orig_height) + 1)
+
+            window = image[window_ymin:window_ymax, window_xmin:window_xmax]
+            window = cv2.resize(window, (self.image_width, self.image_height))
+            window = np.array(window, dtype=np.float)
+            window /= 255.0
+            window = np.reshape(window, (window.shape[0], window.shape[1], 1))
+            x[i] = window
+
+            xmin = (float(target_box[0] - window_xmin) / float(window_xmax - window_xmin))
+            ymin = (float(target_box[1] - window_ymin) / float(window_ymax - window_ymin))
+            xmax = (float(target_box[2] - window_xmin) / float(window_xmax - window_xmin))
+            ymax = (float(target_box[3] - window_ymin) / float(window_ymax - window_ymin))
+
+            y[i] = (xmin, ymin, xmax, ymax)
 
         return x, y

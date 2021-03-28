@@ -3,7 +3,6 @@ import os
 import numpy as np
 import cv2
 import xml.etree.ElementTree as et
-import math
 
 
 class DataGenerator(tf.keras.utils.Sequence):
