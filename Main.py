@@ -18,5 +18,3 @@ if __name__ == "__main__":
     #reg_prop.train_model("data/train/labels/", "data/train/images", "data/test/labels", "data/test/images", 25, 8, False)
     box_reg = BoundingBoxRegression(400, 400, "bbox_weights.h5")
     box_reg.train_model("data/train/labels/", "data/train/images", "data/test/labels", "data/test/images", 25, 8, False)
-
-

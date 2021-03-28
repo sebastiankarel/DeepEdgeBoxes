@@ -59,10 +59,26 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymax = int(bndbox.find('ymax').text)
                 bboxes.append((xmin, ymin, xmax, ymax))
             target_box = random.choice(bboxes)
-            window_xmin = np.random.randint(max(target_box[0] - 100, 0), target_box[0] + 1)
-            window_ymin = np.random.randint(max(target_box[1] - 100, 0), target_box[1] + 1)
-            window_xmax = np.random.randint(target_box[2], min(target_box[2] + 100, orig_width) + 1)
-            window_ymax = np.random.randint(target_box[3], min(target_box[3] + 100, orig_height) + 1)
+            if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
+                x_margin = int(float(target_box[2] - target_box[0]) * 0.4)
+                window_xmin = np.random.randint(max(target_box[0] - x_margin, 0), target_box[0] + 1)
+                window_xmax = np.random.randint(target_box[2], min(target_box[2] + x_margin, orig_width) + 1)
+                width = window_xmax - window_xmin
+                margin_y = width - (target_box[3] - target_box[1])
+                margin_y_min = np.random.randint(0, margin_y + 1)
+                margin_y_max = margin_y - margin_y_min
+                window_ymin = max(target_box[1] - margin_y_min, 0)
+                window_ymax = min(target_box[3] + margin_y_max, orig_height)
+            else:
+                y_margin = int(float(target_box[3] - target_box[1]) * 0.4)
+                window_ymin = np.random.randint(max(target_box[1] - y_margin, 0), target_box[1] + 1)
+                window_ymax = np.random.randint(target_box[3], min(target_box[3] + y_margin, orig_height) + 1)
+                height = window_ymax - window_ymin
+                margin_x = height - (target_box[2] - target_box[0])
+                margin_x_min = np.random.randint(0, margin_x + 1)
+                margin_x_max = margin_x - margin_x_min
+                window_xmin = max(target_box[0] - margin_x_min, 0)
+                window_xmax = min(target_box[2] + margin_x_max, orig_width)
 
             window = image[window_ymin:window_ymax, window_xmin:window_xmax]
             window = cv2.resize(window, (self.image_width, self.image_height))
