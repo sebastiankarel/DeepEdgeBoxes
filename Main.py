@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 from RegionProposal import RegionProposal
+import numpy as np
 
 
 def init_tf_gpu():

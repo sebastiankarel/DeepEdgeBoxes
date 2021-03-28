@@ -3,6 +3,7 @@ import os
 import numpy as np
 import cv2
 import xml.etree.ElementTree as et
+import math
 
 
 class DataGenerator(tf.keras.utils.Sequence):
@@ -22,7 +23,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.indexes = np.arange(len(self.labels))
         self.window_height = window_height
         self.window_width = window_width
-        self.max_scale = 8
+        self.max_scale = 6
         self.on_epoch_end()
 
     def __getitem__(self, index):
@@ -59,8 +60,12 @@ class DataGenerator(tf.keras.utils.Sequence):
             window_xmax = window_xmin + self.window_width
             window_ymax = window_ymin + self.window_height
 
+            window_area = float(self.window_width * self.window_height)
+
             x[i] = image[window_ymin:window_ymax, window_xmin:window_xmax]
 
+            avg_iou = 0.0
+            num_boxes = 0
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
             root = tree.getroot()
             for bndbox in root.findall("./object/bndbox"):
@@ -68,11 +73,15 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymin = int((float(bndbox.find('ymin').text) / orig_height) * float(image_height))
                 xmax = int((float(bndbox.find('xmax').text) / orig_width) * float(image_width))
                 ymax = int((float(bndbox.find('ymax').text) / orig_height) * float(image_height))
-                bbox_area = (xmax - xmin) * (ymax - ymin)
                 x_overlap = max(0, min(window_xmax, xmax) - max(window_xmin, xmin))
                 y_overlap = max(0, min(window_ymax, ymax) - max(window_ymin, ymin))
                 intersection = x_overlap * y_overlap
+                if intersection > 0:
+                    bbox_area = (xmax - xmin) * (ymax - ymin)
+                    iou = float(intersection) / float((bbox_area + window_area - intersection))
+                    avg_iou += iou
+                    num_boxes += 1
 
-            y[i] = 0.0
+            y[i] = avg_iou / float(num_boxes)
 
         return x, y
