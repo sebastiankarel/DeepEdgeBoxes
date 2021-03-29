@@ -4,6 +4,7 @@ import tensorflow as tf
 from RegionProposal import RegionProposal
 from BoundingBoxRegression import BoundingBoxRegression
 
+
 def init_tf_gpu():
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True

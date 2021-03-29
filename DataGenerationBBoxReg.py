@@ -57,8 +57,13 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymin = int(bndbox.find('ymin').text)
                 xmax = int(bndbox.find('xmax').text)
                 ymax = int(bndbox.find('ymax').text)
-                bboxes.append((xmin, ymin, xmax, ymax))
+                area = (xmax - xmin) * (ymax - ymin)
+                if area > int(float(orig_width * orig_height) * 0.005):
+                    bboxes.append((xmin, ymin, xmax, ymax, area))
+
+            #bboxes = sorted(bboxes, key=lambda box: box[4], reverse=True)
             target_box = random.choice(bboxes)
+
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
                 x_margin = int(float(target_box[2] - target_box[0]) * 0.4)
                 window_xmin = np.random.randint(max(target_box[0] - x_margin, 0), target_box[0] + 1)
