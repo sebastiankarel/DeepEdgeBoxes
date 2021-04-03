@@ -8,18 +8,18 @@ import random
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, edge_images_dir, labels_dir, batch_size, image_width, image_height):
+    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height):
         self.batch_size = batch_size
         self.labels_dir = labels_dir
         labels = []
         for file_name in os.listdir(labels_dir):
             img_file = file_name.split(".")[0] + ".jpg"
-            if os.path.isfile(os.path.join(edge_images_dir, img_file)):
-                image = cv2.imread(os.path.join(edge_images_dir, img_file))
+            if os.path.isfile(os.path.join(images_dir, img_file)):
+                image = cv2.imread(os.path.join(images_dir, img_file))
                 if image is not None:
                     labels.append(file_name.split(".")[0])
         self.labels = labels
-        self.edge_images_dir = edge_images_dir
+        self.images_dir = images_dir
         self.image_width = image_width
         self.image_height = image_height
         self.channels = 1
@@ -44,10 +44,17 @@ class DataGenerator(tf.keras.utils.Sequence):
         x = np.empty((self.batch_size, self.image_height, self.image_width, self.channels))
         y = np.empty((self.batch_size, self.label_dim))
         for i, f in enumerate(labels_temp):
-            image = cv2.imread(os.path.join(self.edge_images_dir, f + ".jpg"))
+            image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = cv2.GaussianBlur(image, (3, 3), 0)
+
+            sigma = 0.33
+            v = np.median(image)
+            lower = int(max(0, (1.0 - sigma) * v))
+            upper = int(min(255, (1.0 + sigma) * v))
+            image = cv2.Canny(image, lower, upper)
 
             bboxes = []
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
@@ -57,15 +64,11 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymin = int(bndbox.find('ymin').text)
                 xmax = int(bndbox.find('xmax').text)
                 ymax = int(bndbox.find('ymax').text)
-                area = (xmax - xmin) * (ymax - ymin)
-                if area > int(float(orig_width * orig_height) * 0.005):
-                    bboxes.append((xmin, ymin, xmax, ymax, area))
-
-            #bboxes = sorted(bboxes, key=lambda box: box[4], reverse=True)
+                bboxes.append((xmin, ymin, xmax, ymax))
             target_box = random.choice(bboxes)
 
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
-                x_margin = int(float(target_box[2] - target_box[0]) * 0.4)
+                x_margin = int(float(target_box[2] - target_box[0]) * 0.7)
                 window_xmin = np.random.randint(max(target_box[0] - x_margin, 0), target_box[0] + 1)
                 window_xmax = np.random.randint(target_box[2], min(target_box[2] + x_margin, orig_width) + 1)
                 width = window_xmax - window_xmin
@@ -75,7 +78,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_ymin = max(target_box[1] - margin_y_min, 0)
                 window_ymax = min(target_box[3] + margin_y_max, orig_height)
             else:
-                y_margin = int(float(target_box[3] - target_box[1]) * 0.4)
+                y_margin = int(float(target_box[3] - target_box[1]) * 0.7)
                 window_ymin = np.random.randint(max(target_box[1] - y_margin, 0), target_box[1] + 1)
                 window_ymax = np.random.randint(target_box[3], min(target_box[3] + y_margin, orig_height) + 1)
                 height = window_ymax - window_ymin

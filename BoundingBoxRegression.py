@@ -1,40 +1,35 @@
 import keras
 from DataGenerationBBoxReg import DataGenerator
-import cv2
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-from EdgeDetection import HED
-import xml.etree.ElementTree as et
-from shutil import copyfile
 
 
 class BoundingBoxRegression:
 
-    def __init__(self, image_width, image_height, weight_file):
+    def __init__(self, image_width, image_height, weight_file, classifier_weights):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
+        self.classifier_weights = classifier_weights
 
     def __get_model(self):
         model = keras.models.Sequential()
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, 1)))
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", trainable=False, input_shape=(self.image_height, self.image_width, 1)))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_1"))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1"))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2"))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1", trainable=False))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_2"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3"))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1", trainable=False))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2", trainable=False))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_3"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1", trainable=False))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2", trainable=False))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_4"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1", trainable=False))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2", trainable=False))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dense(units=128, activation='relu', name="dense_reg_1"))
@@ -50,6 +45,9 @@ class BoundingBoxRegression:
         if load_weights:
             if os.path.isfile(self.weight_file):
                 model.load_weights(self.weight_file)
+        else:
+            if os.path.isfile(self.classifier_weights):
+                model.load_weights(self.classifier_weights, by_name=True)
         training_generator = DataGenerator(
             train_images_dir,
             train_labels_dir,
@@ -60,7 +58,7 @@ class BoundingBoxRegression:
             test_labels_dir,
             batch_size,
             self.image_width, self.image_height)
-        model.fit_generator(generator=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
+        model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
 
     def draw_predictions(self):
