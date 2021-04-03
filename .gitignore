@@ -8,3 +8,6 @@
 !RegionProposal.py
 !DataGenerationBBoxReg.py
 !DataGenerationProposal.py
+!Classification.py
+!DataGenerationClassfication.py
+!pvoc07_util.py
