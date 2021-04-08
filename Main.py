@@ -23,7 +23,6 @@ def init_tf_gpu():
 if __name__ == "__main__":
     init_tf_gpu()
 
-
     classifier = Classification(224, 224, "classifier_weights.h5")
     classifier.train_model(
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations",

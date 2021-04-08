@@ -50,9 +50,9 @@ class DataGenerator(tf.keras.utils.Sequence):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-            no_sigma = image
+            no_sigma = image.copy()
             low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
             high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
 
@@ -84,11 +84,11 @@ class DataGenerator(tf.keras.utils.Sequence):
             label_vec = np.zeros(self.label_dim, dtype=np.float)
             label_vec[target_box[4]] = 1.0
 
-            image_copy = image.copy()
+            image_copy = result.copy()
             obj = image_copy[target_box[1]:target_box[3], target_box[0]:target_box[2]]
             for bbox in bboxes:
-                cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 0), -1)
-            image[target_box[1]:target_box[3], target_box[0]:target_box[2]] = obj
+                cv2.rectangle(result, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 0), -1)
+            result[target_box[1]:target_box[3], target_box[0]:target_box[2]] = obj
 
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
                 window_xmin = target_box[0]
