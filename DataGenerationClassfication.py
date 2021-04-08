@@ -25,7 +25,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.images_dir = images_dir
         self.image_width = image_width
         self.image_height = image_height
-        self.channels = 1
+        self.channels = 3
         self.indexes = np.arange(len(self.labels))
         self.label_dim = 20
         self.on_epoch_end()
@@ -51,13 +51,20 @@ class DataGenerator(tf.keras.utils.Sequence):
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            image = cv2.GaussianBlur(image, (3, 3), 0)
+
+            no_sigma = image
+            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
 
             sigma = 0.33
             v = np.median(image)
             lower = int(max(0, (1.0 - sigma) * v))
             upper = int(min(255, (1.0 + sigma) * v))
-            image = cv2.Canny(image, lower, upper)
+            no_sigma = cv2.Canny(no_sigma, lower, upper)
+            low_sigma = cv2.Canny(low_sigma, lower, upper)
+            high_sigma = cv2.Canny(high_sigma, lower, upper)
+
+            result = np.dstack((no_sigma, low_sigma, high_sigma))
 
             bboxes = []
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
@@ -98,11 +105,13 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmin = max(target_box[0] - margin_x, 0)
                 window_xmax = min(target_box[2] + margin_x, orig_width)
 
-            window = image[window_ymin:window_ymax, window_xmin:window_xmax]
+            window = result[window_ymin:window_ymax, window_xmin:window_xmax]
             window = cv2.resize(window, (self.image_width, self.image_height))
+            if np.random.randint(0, 100) <= 50:
+                window = cv2.flip(window, 1)
             window = np.array(window, dtype=np.float)
             window /= 255.0
-            window = np.reshape(window, (window.shape[0], window.shape[1], 1))
+            #window = np.reshape(window, (window.shape[0], window.shape[1], 1))
             x[i] = window
 
             y[i] = label_vec
