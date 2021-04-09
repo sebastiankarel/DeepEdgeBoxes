@@ -50,7 +50,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
-            #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
             no_sigma = image.copy()
             low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
@@ -84,36 +84,37 @@ class DataGenerator(tf.keras.utils.Sequence):
             label_vec = np.zeros(self.label_dim, dtype=np.float)
             label_vec[target_box[4]] = 1.0
 
-            image_copy = result.copy()
-            obj = image_copy[target_box[1]:target_box[3], target_box[0]:target_box[2]]
-            for bbox in bboxes:
-                cv2.rectangle(result, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 0, 0), -1)
-            result[target_box[1]:target_box[3], target_box[0]:target_box[2]] = obj
-
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
-                window_xmin = target_box[0]
-                window_xmax = target_box[2]
-                width = window_xmax - window_xmin
-                margin_y = int((width - (target_box[3] - target_box[1])) / 2)
-                window_ymin = max(target_box[1] - margin_y, 0)
-                window_ymax = min(target_box[3] + margin_y, orig_height)
+                margin = int(float(target_box[2] - target_box[0]) * 0.2)
+                window_xmin = max(target_box[0] - margin, 0)
+                window_xmax = min(target_box[2] + margin, orig_width)
+                window_ymin = max(target_box[1] - margin, 0)
+                window_ymax = min(target_box[3] + margin, orig_height)
+                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
             else:
-                window_ymin = target_box[1]
-                window_ymax = target_box[3]
-                height = window_ymax - window_ymin
-                margin_x = int((height - (target_box[2] - target_box[0])) / 2)
-                window_xmin = max(target_box[0] - margin_x, 0)
-                window_xmax = min(target_box[2] + margin_x, orig_width)
+                margin = int(float(target_box[3] - target_box[1]) * 0.2)
+                window_ymin = max(target_box[1] - margin, 0)
+                window_ymax = min(target_box[3] + margin, orig_height)
+                window_xmin = max(target_box[0] - margin, 0)
+                window_xmax = min(target_box[2] + margin, orig_width)
+                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
 
-            window = result[window_ymin:window_ymax, window_xmin:window_xmax]
+            if cutout.shape[1] > cutout.shape[0]:
+                window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
+                margin = int((window.shape[0] - cutout.shape[0]) / 2)
+                window[margin:(margin + cutout.shape[0]), :, :] = cutout
+            else:
+                window = np.zeros((cutout.shape[0], cutout.shape[0], 3))
+                margin = int((window.shape[1] - cutout.shape[1]) / 2)
+                window[:, margin:(margin + cutout.shape[1]), :] = cutout
+
             window = cv2.resize(window, (self.image_width, self.image_height))
             if np.random.randint(0, 100) <= 50:
                 window = cv2.flip(window, 1)
             window = np.array(window, dtype=np.float)
             window /= 255.0
-            #window = np.reshape(window, (window.shape[0], window.shape[1], 1))
-            x[i] = window
 
+            x[i] = window
             y[i] = label_vec
 
         return x, y

@@ -29,7 +29,7 @@ if __name__ == "__main__":
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
-        35,
+        50,
         16,
         False
     )
@@ -49,5 +49,7 @@ if __name__ == "__main__":
 
     #reg_prop = RegionProposal(400, 400, "reg_prop_weights.h5")
     #reg_prop.train_model("data/train/labels/", "data/train/images", "data/test/labels", "data/test/images", 25, 8, False)
+
+
 
 

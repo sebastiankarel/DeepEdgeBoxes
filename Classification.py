@@ -1,5 +1,5 @@
 import keras
-from DataGenerationClassfication import DataGenerator
+from DataGenerationClassification import DataGenerator
 import os
 
 
@@ -32,7 +32,7 @@ class Classification:
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dropout(0.4))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_1"))
+        model.add(keras.layers.Dense(units=128, activation='relu', name="dense_class_1"))
         model.add(keras.layers.Dense(units=128, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=20, activation='softmax', name="out_class"))
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=['accuracy'])
