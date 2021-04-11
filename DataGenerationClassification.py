@@ -108,9 +108,9 @@ class DataGenerator(tf.keras.utils.Sequence):
                 new_width = new_height * aspect_ration
                 cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
 
-            # Augment data at random by rotating +/- 30 degrees
+            # Augment data at random by rotating +/- 90 degrees
             if np.random.randint(0, 100) <= 50:
-                angle = int(np.random.uniform(-1, 1) * 30.0)
+                angle = round(np.random.uniform(-1, 1) * 90.0)
                 image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
                 rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
                 cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)

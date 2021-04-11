@@ -31,6 +31,7 @@ class Classification:
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
+        model.add(keras.layers.Dropout(0.5))
         model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_1"))
         model.add(keras.layers.Dense(units=256, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=20, activation='softmax', name="out_class"))
