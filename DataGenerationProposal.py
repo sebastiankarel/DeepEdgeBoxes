@@ -3,6 +3,7 @@ import os
 import numpy as np
 import cv2
 import xml.etree.ElementTree as et
+import random
 
 
 class DataGenerator(tf.keras.utils.Sequence):
@@ -42,45 +43,46 @@ class DataGenerator(tf.keras.utils.Sequence):
         x = np.empty((self.batch_size, self.window_height, self.window_width, 1))
         y = np.empty((self.batch_size, 1), dtype=np.float)
         for i, f in enumerate(labels_temp):
-            scale = np.random.randint(2, self.max_scale)
-            image_width = scale * self.window_width
-            image_height = scale * self.window_height
-
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
-            orig_width = float(image.shape[1])
-            orig_height = float(image.shape[0])
+            orig_width = int(image.shape[1])
+            orig_height = int(image.shape[0])
+
+            # Generate edge image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            image = np.array(cv2.resize(image, (image_width, image_height)), dtype=np.float)
-            image = np.reshape(image, (image.shape[0], image.shape[1], 1))
-            image = image / 255.0
+            no_sigma = image.copy()
+            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
+            sigma = 0.33
+            v = np.median(image)
+            lower = int(max(0, (1.0 - sigma) * v))
+            upper = int(min(255, (1.0 + sigma) * v))
+            no_sigma = cv2.Canny(no_sigma, lower, upper)
+            low_sigma = cv2.Canny(low_sigma, lower, upper)
+            high_sigma = cv2.Canny(high_sigma, lower, upper)
+            result = np.dstack((no_sigma, low_sigma, high_sigma))
 
-            window_xmin = np.random.randint(0, image_width - self.window_width)
-            window_ymin = np.random.randint(0, image_height - self.window_height)
-            window_xmax = window_xmin + self.window_width
-            window_ymax = window_ymin + self.window_height
-
-            window_area = float(self.window_width * self.window_height)
-
-            x[i] = image[window_ymin:window_ymax, window_xmin:window_xmax]
-
-            avg_iou = 0.0
-            num_boxes = 0
+            # Read ground truth
+            bboxes = []
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
             root = tree.getroot()
-            for bndbox in root.findall("./object/bndbox"):
-                xmin = int((float(bndbox.find('xmin').text) / orig_width) * float(image_width))
-                ymin = int((float(bndbox.find('ymin').text) / orig_height) * float(image_height))
-                xmax = int((float(bndbox.find('xmax').text) / orig_width) * float(image_width))
-                ymax = int((float(bndbox.find('ymax').text) / orig_height) * float(image_height))
-                x_overlap = max(0, min(window_xmax, xmax) - max(window_xmin, xmin))
-                y_overlap = max(0, min(window_ymax, ymax) - max(window_ymin, ymin))
-                intersection = x_overlap * y_overlap
-                if intersection > 0:
-                    bbox_area = (xmax - xmin) * (ymax - ymin)
-                    iou = float(intersection) / float((bbox_area + window_area - intersection))
-                    avg_iou += iou
-                    num_boxes += 1
+            for obj in root.findall("./object"):
+                label_name = obj.find('name').text
+                label = self.class_labels.index(label_name)
+                bndbox = obj.find('bndbox')
+                xmin = int(bndbox.find('xmin').text)
+                ymin = int(bndbox.find('ymin').text)
+                xmax = int(bndbox.find('xmax').text)
+                ymax = int(bndbox.find('ymax').text)
+                bboxes.append((xmin, ymin, xmax, ymax, label))
 
-            y[i] = avg_iou / float(num_boxes)
+            # Cut out random window
+            window = result
+
+            window = cv2.resize(window, (self.image_width, self.image_height))
+            window = np.array(window, dtype=np.float)
+            window /= 255.0
+
+            x[i] = window
+            y[i] = 0.0
 
         return x, y

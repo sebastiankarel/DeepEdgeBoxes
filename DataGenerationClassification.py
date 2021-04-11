@@ -50,12 +50,12 @@ class DataGenerator(tf.keras.utils.Sequence):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+            # Generate edge image
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             no_sigma = image.copy()
             low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
             high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
-
             sigma = 0.33
             v = np.median(image)
             lower = int(max(0, (1.0 - sigma) * v))
@@ -63,9 +63,9 @@ class DataGenerator(tf.keras.utils.Sequence):
             no_sigma = cv2.Canny(no_sigma, lower, upper)
             low_sigma = cv2.Canny(low_sigma, lower, upper)
             high_sigma = cv2.Canny(high_sigma, lower, upper)
-
             result = np.dstack((no_sigma, low_sigma, high_sigma))
 
+            # Read ground truth
             bboxes = []
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
             root = tree.getroot()
@@ -81,9 +81,11 @@ class DataGenerator(tf.keras.utils.Sequence):
             target_box = random.choice(bboxes)
             bboxes.remove(target_box)
 
+            # Create label vector
             label_vec = np.zeros(self.label_dim, dtype=np.float)
             label_vec[target_box[4]] = 1.0
 
+            # Find image region with object (bbox + margin)
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
                 margin = int(float(target_box[2] - target_box[0]) * 0.2)
                 window_xmin = max(target_box[0] - margin, 0)
@@ -99,6 +101,25 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmax = min(target_box[2] + margin, orig_width)
                 cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
 
+            # Augment data at random by resizing
+            if np.random.randint(0, 100) <= 50:
+                aspect_ration = float(cutout.shape[1]) / float(cutout.shape[0])
+                new_height = float(cutout.shape[0]) * np.random.uniform(0.5, 1.0)
+                new_width = new_height * aspect_ration
+                cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
+
+            # Augment data at random by rotating +/- 30 degrees
+            if np.random.randint(0, 100) <= 50:
+                angle = int(np.random.uniform(-1, 1) * 30.0)
+                image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
+                rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+                cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)
+
+            # Augment data at random by flipping
+            if np.random.randint(0, 100) <= 50:
+                cutout = cv2.flip(cutout, 1)
+
+            # Place image region centred on square black background
             if cutout.shape[1] > cutout.shape[0]:
                 window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
                 margin = int((window.shape[0] - cutout.shape[0]) / 2)
@@ -109,8 +130,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window[:, margin:(margin + cutout.shape[1]), :] = cutout
 
             window = cv2.resize(window, (self.image_width, self.image_height))
-            if np.random.randint(0, 100) <= 50:
-                window = cv2.flip(window, 1)
+
             window = np.array(window, dtype=np.float)
             window /= 255.0
 
