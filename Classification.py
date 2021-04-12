@@ -48,11 +48,11 @@ class Classification:
             train_images_dir,
             train_labels_dir,
             batch_size,
-            self.image_width, self.image_height)
+            self.image_width, self.image_height, True)
         test_generator = DataGenerator(
             test_images_dir,
             test_labels_dir,
             batch_size,
-            self.image_width, self.image_height)
+            self.image_width, self.image_height, False)
         model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)

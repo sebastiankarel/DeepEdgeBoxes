@@ -8,7 +8,7 @@ import random
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height):
+    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, use_augmentation):
         self.class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
                              'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
                              'sofa', 'tvmonitor']
@@ -28,6 +28,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.channels = 3
         self.indexes = np.arange(len(self.labels))
         self.label_dim = 20
+        self.use_augmentation = use_augmentation
         self.on_epoch_end()
 
     def __getitem__(self, index):
@@ -101,23 +102,25 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmax = min(target_box[2] + margin, orig_width)
                 cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
 
-            # Augment data at random by resizing
-            if np.random.randint(0, 100) <= 50:
-                aspect_ration = float(cutout.shape[1]) / float(cutout.shape[0])
-                new_height = float(cutout.shape[0]) * np.random.uniform(0.5, 1.0)
-                new_width = new_height * aspect_ration
-                cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
-
-            # Augment data at random by rotating +/- 90 degrees
-            if np.random.randint(0, 100) <= 50:
-                angle = round(np.random.uniform(-1, 1) * 90.0)
-                image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
-                rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-                cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)
-
-            # Augment data at random by flipping
-            if np.random.randint(0, 100) <= 50:
-                cutout = cv2.flip(cutout, 1)
+            if self.use_augmentation:
+                # Augment 50% of data points
+                if np.random.randint(0, 100) <= 50:
+                    rand_val = np.random.randint(0, 3)
+                    # Resize to min 50% of size
+                    if rand_val == 0:
+                        aspect_ration = float(cutout.shape[1]) / float(cutout.shape[0])
+                        new_height = float(cutout.shape[0]) * np.random.uniform(0.5, 1.0)
+                        new_width = new_height * aspect_ration
+                        cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
+                    # Rotate by max +/- 90°
+                    elif rand_val == 1:
+                        angle = round(np.random.uniform(-1, 1) * 90.0)
+                        image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
+                        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+                        cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)
+                    # Flip image vertically
+                    else:
+                        cutout = cv2.flip(cutout, 1)
 
             # Place image region centred on square black background
             if cutout.shape[1] > cutout.shape[0]:

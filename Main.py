@@ -6,6 +6,13 @@ from BoundingBoxRegression import BoundingBoxRegression
 from Classification import Classification
 
 
+import os
+import numpy as np
+import random
+import xml.etree.ElementTree as et
+import cv2
+
+
 def init_tf_gpu():
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -22,10 +29,23 @@ if __name__ == "__main__":
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
-        50,
+        40,
         18,
         False
     )
+
+    '''
+    reg_prop = RegionProposal(224, 224, "reg_prop_weights.h5", "classifier_weights.h5")
+    reg_prop.train_model(
+        "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
+        "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
+        "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
+        "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
+        30,
+        16,
+        False
+    )
+    '''
 
     '''
     box_reg = BoundingBoxRegression(224, 224, "bbox_weights.h5", "classifier_weights.h5")
@@ -39,9 +59,6 @@ if __name__ == "__main__":
         False
     )
     '''
-
-    #reg_prop = RegionProposal(400, 400, "reg_prop_weights.h5")
-    #reg_prop.train_model("data/train/labels/", "data/train/images", "data/test/labels", "data/test/images", 25, 8, False)
 
 
 
