@@ -76,7 +76,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymax = round((float(bndbox.find('ymax').text) / float(orig_height)) * float(result.shape[0]))
                 bboxes.append((xmin, ymin, xmax, ymax))
 
-            # Resize randomly and cut out random window
+            # Cut out random window
             window_xmin = np.random.randint(0, (result.shape[1] - self.window_width) + 1)
             window_ymin = np.random.randint(0, (result.shape[0] - self.window_height) + 1)
             window_xmax = window_xmin + self.window_width

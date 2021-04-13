@@ -40,7 +40,7 @@ class RegionProposal:
         model.add(keras.layers.Dense(units=32, activation='relu', name="dense_dis_3"))
         model.add(keras.layers.Dense(units=1, activation='sigmoid', name="out_dis"))
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.MeanSquaredError())
-        model.load_weights(self.classfifier_weights)
+        model.load_weights(self.classfifier_weights, by_name=True)
         model.summary()
         return model
 
@@ -64,34 +64,50 @@ class RegionProposal:
         model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
 
-    def predict(self, edge_image):
+    def predict(self, image):
+        # Generate edge image
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        no_sigma = image.copy()
+        low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+        high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
+        sigma = 0.33
+        v = np.median(image)
+        lower = int(max(0, (1.0 - sigma) * v))
+        upper = int(min(255, (1.0 + sigma) * v))
+        no_sigma = cv2.Canny(no_sigma, lower, upper)
+        low_sigma = cv2.Canny(low_sigma, lower, upper)
+        high_sigma = cv2.Canny(high_sigma, lower, upper)
+        edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
+
+        # Run exhaustive sliding window
         result = []
-        if os.path.isfile(self.weight_file):
-            model = self.__get_model()
-            model.load_weights(self.weight_file)
-            window_width = self.window_width
-            window_height = self.window_height
-            scales = range(2, 6)
-            overlap = 0.5
-            for scale in scales:
-                image_width = scale * window_width
-                image_height = scale * window_height
-                steps = int(((scale / overlap) - 1))
-                for x in range(0, steps):
-                    x_offset = x * (window_width * overlap)
-                    for y in range(0, steps):
-                        y_offset = y * (window_height * overlap)
-                        edge_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
-                        xmin = int(x_offset)
-                        xmax = int(x_offset + window_width)
-                        ymin = int(y_offset)
-                        ymax = int(y_offset + window_height)
-                        edge_image = edge_image[ymin:ymax, xmin:xmax]
-                        edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
-                        edge_image = np.reshape(edge_image, (1, edge_image.shape[0], edge_image.shape[1], edge_image.shape[2]))
-                        edge_image = edge_image / 255.0
-                        prediction = model.predict(edge_image, 1)[0]
-                        # TODO normalise for scale
-                        window_result = [x_offset, y_offset, x_offset + window_width, y_offset + window_height, prediction]
-                        result.append(window_result)
+        model = self.__get_model()
+        model.load_weights(self.weight_file)
+        window_width = self.window_width
+        window_height = self.window_height
+        scales = range(2, 6)
+        overlap = 0.5
+        for scale in scales:
+            image_width = scale * window_width
+            image_height = scale * window_height
+            steps = int(((scale / overlap) - 1))
+            for x in range(0, steps):
+                x_offset = x * (window_width * overlap)
+                for y in range(0, steps):
+                    y_offset = y * (window_height * overlap)
+                    resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
+                    xmin = int(x_offset)
+                    xmax = int(x_offset + window_width)
+                    ymin = int(y_offset)
+                    ymax = int(y_offset + window_height)
+                    window = resized_image[ymin:ymax, xmin:xmax]
+                    window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                    window = window / 255.0
+                    prediction = model.predict(window, 1)[0]
+                    true_xmin = round(x_offset / scale)
+                    true_ymin = round(y_offset / scale)
+                    true_xmax = true_xmin + round(window_width / scale)
+                    true_ymax = true_ymin + round(window_height / scale)
+                    window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                    result.append(window_result)
         return result
