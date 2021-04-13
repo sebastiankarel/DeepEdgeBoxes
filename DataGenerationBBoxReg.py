@@ -22,7 +22,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.images_dir = images_dir
         self.image_width = image_width
         self.image_height = image_height
-        self.channels = 1
+        self.channels = 3
         self.indexes = np.arange(len(self.labels))
         self.label_dim = 4
         self.on_epoch_end()
@@ -47,14 +47,20 @@ class DataGenerator(tf.keras.utils.Sequence):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            image = cv2.GaussianBlur(image, (3, 3), 0)
 
+            # Generate edge image
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            no_sigma = image.copy()
+            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
             sigma = 0.33
             v = np.median(image)
             lower = int(max(0, (1.0 - sigma) * v))
             upper = int(min(255, (1.0 + sigma) * v))
-            image = cv2.Canny(image, lower, upper)
+            no_sigma = cv2.Canny(no_sigma, lower, upper)
+            low_sigma = cv2.Canny(low_sigma, lower, upper)
+            high_sigma = cv2.Canny(high_sigma, lower, upper)
+            result = np.dstack((no_sigma, low_sigma, high_sigma))
 
             bboxes = []
             tree = et.parse(os.path.join(self.labels_dir, f + ".xml"))
@@ -67,29 +73,29 @@ class DataGenerator(tf.keras.utils.Sequence):
                 bboxes.append((xmin, ymin, xmax, ymax))
             target_box = random.choice(bboxes)
 
+            # Find image region with object (bbox + margin)
             if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
-                x_margin = int(float(target_box[2] - target_box[0]) * 0.7)
-                window_xmin = np.random.randint(max(target_box[0] - x_margin, 0), target_box[0] + 1)
-                window_xmax = np.random.randint(target_box[2], min(target_box[2] + x_margin, orig_width) + 1)
-                width = window_xmax - window_xmin
-                margin_y = width - (target_box[3] - target_box[1])
-                margin_y_min = np.random.randint(0, margin_y + 1)
-                margin_y_max = margin_y - margin_y_min
-                window_ymin = max(target_box[1] - margin_y_min, 0)
-                window_ymax = min(target_box[3] + margin_y_max, orig_height)
+                margin = int(float(target_box[2] - target_box[0]) * 0.2)
+                window_xmin = max(target_box[0] - margin, 0)
+                window_xmax = min(target_box[2] + margin, orig_width)
+                window_height = window_xmax - window_xmin
+                box_height = target_box[3] - target_box[1]
+                y_margin = (window_height - box_height) / 2
+                window_ymin = max(target_box[1] - y_margin, 0)
+                window_ymax = min(target_box[3] + y_margin, orig_height)
+                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
             else:
-                y_margin = int(float(target_box[3] - target_box[1]) * 0.7)
-                window_ymin = np.random.randint(max(target_box[1] - y_margin, 0), target_box[1] + 1)
-                window_ymax = np.random.randint(target_box[3], min(target_box[3] + y_margin, orig_height) + 1)
-                height = window_ymax - window_ymin
-                margin_x = height - (target_box[2] - target_box[0])
-                margin_x_min = np.random.randint(0, margin_x + 1)
-                margin_x_max = margin_x - margin_x_min
-                window_xmin = max(target_box[0] - margin_x_min, 0)
-                window_xmax = min(target_box[2] + margin_x_max, orig_width)
+                margin = int(float(target_box[3] - target_box[1]) * 0.2)
+                window_ymin = max(target_box[1] - margin, 0)
+                window_ymax = min(target_box[3] + margin, orig_height)
+                window_width = window_ymax - window_ymin
+                box_width = target_box[2] - target_box[0]
+                x_margin = (window_width - box_width) / 2
+                window_xmin = max(target_box[0] - x_margin, 0)
+                window_xmax = min(target_box[2] + x_margin, orig_width)
+                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
 
-            window = image[window_ymin:window_ymax, window_xmin:window_xmax]
-            window = cv2.resize(window, (self.image_width, self.image_height))
+            window = cv2.resize(cutout, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
             window /= 255.0
             window = np.reshape(window, (window.shape[0], window.shape[1], 1))

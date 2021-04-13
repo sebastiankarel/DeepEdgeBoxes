@@ -13,7 +13,7 @@ class BoundingBoxRegression:
 
     def __get_model(self):
         model = keras.models.Sequential()
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", trainable=False, input_shape=(self.image_height, self.image_width, 1)))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", trainable=False, input_shape=(self.image_height, self.image_width, 3)))
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2", trainable=False))
         model.add(keras.layers.MaxPool2D(name="max_pool_1"))
         model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1", trainable=False))

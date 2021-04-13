@@ -40,7 +40,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         np.random.shuffle(self.labels)
 
     def __data_generation(self, labels_temp):
-        x = np.empty((self.batch_size, self.window_height, self.window_width, 1))
+        x = np.empty((self.batch_size, self.window_height, self.window_width, 3))
         y = np.empty((self.batch_size, 1), dtype=np.float)
         for i, f in enumerate(labels_temp):
             # Read and enlarge image to scan at different scales

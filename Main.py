@@ -35,16 +35,26 @@ if __name__ == "__main__":
     )
     '''
     reg_prop = RegionProposal(224, 224, "reg_prop_weights.h5", "classifier_weights.h5")
+    for f in os.listdir("pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"):
+        image = cv2.imread(os.path.join("pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages", f))
+        if image is not None:
+            prediction = reg_prop.predict(image)
+            for pred in prediction:
+                if pred[4][0] >= 0.2:
+                    cv2.rectangle(image, (pred[0], pred[1]), (pred[2], pred[3]), (0, 255, 0), 1)
+            cv2.imshow("Image", image)
+            cv2.waitKey(0)
+    '''
     reg_prop.train_model(
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
-        35,
+        18,
         18,
         False
     )
-
+    '''
     '''
     box_reg = BoundingBoxRegression(224, 224, "bbox_weights.h5", "classifier_weights.h5")
     box_reg.train_model(
@@ -53,10 +63,9 @@ if __name__ == "__main__":
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
         30,
-        16,
+        18,
         False
     )
     '''
-
 
 
