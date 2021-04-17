@@ -1,6 +1,8 @@
 import keras
 from DataGenerationClassification import DataGenerator
 import os
+import cv2
+import numpy as np
 
 
 class Classification:
@@ -56,3 +58,56 @@ class Classification:
             self.image_width, self.image_height, False)
         model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
+
+    def predict(self, image):
+        orig_width = image.shape[1]
+        orig_height = image.shape[0]
+
+        # Generate edge image
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        no_sigma = image.copy()
+        low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+        high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
+        sigma = 0.33
+        v = np.median(image)
+        lower = int(max(0, (1.0 - sigma) * v))
+        upper = int(min(255, (1.0 + sigma) * v))
+        no_sigma = cv2.Canny(no_sigma, lower, upper)
+        low_sigma = cv2.Canny(low_sigma, lower, upper)
+        high_sigma = cv2.Canny(high_sigma, lower, upper)
+        edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
+
+        # Run exhaustive sliding window
+        result = []
+        model = self.__get_model()
+        model.load_weights(self.weight_file)
+        window_width = self.image_width
+        window_height = self.image_height
+        scales = range(1, 6)
+        overlap = 0.5
+        for scale in scales:
+            image_width = scale * window_width
+            image_height = scale * window_height
+            resize_x = float(orig_width) / float(image_width)
+            resize_y = float(orig_height) / float(image_height)
+            steps = int(((scale / overlap) - 1))
+            for x in range(0, steps):
+                x_offset = x * (window_width * overlap)
+                for y in range(0, steps):
+                    y_offset = y * (window_height * overlap)
+                    resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
+                    xmin = int(x_offset)
+                    xmax = int(x_offset + window_width)
+                    ymin = int(y_offset)
+                    ymax = int(y_offset + window_height)
+                    window = resized_image[ymin:ymax, xmin:xmax]
+                    window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                    window = window / 255.0
+                    prediction = model.predict(window, 1)[0]
+                    true_xmin = int(x_offset * resize_x)
+                    true_ymin = int(y_offset * resize_y)
+                    true_xmax = true_xmin + int(window_width * resize_x)
+                    true_ymax = true_ymin + int(window_height * resize_y)
+                    window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                    result.append(window_result)
+        return result
