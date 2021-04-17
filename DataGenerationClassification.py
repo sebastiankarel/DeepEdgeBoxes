@@ -97,6 +97,10 @@ class DataGenerator(tf.keras.utils.Sequence):
                 scale = np.random.randint(1, 6)
                 rescaled_width = scale * orig_width
                 rescaled_height = scale * orig_height
+                while self.image_height >= rescaled_height or self.image_width >= rescaled_width:
+                    scale += 1
+                    rescaled_width = scale * orig_width
+                    rescaled_height = scale * orig_height
                 result = cv2.resize(result, (rescaled_width, rescaled_height))
                 xmin = np.random.randint(0, rescaled_width - self.image_width)
                 ymin = np.random.randint(0, rescaled_height - self.image_height)
@@ -159,7 +163,6 @@ class DataGenerator(tf.keras.utils.Sequence):
                     window[:, margin:(margin + cutout.shape[1]), :] = cutout
 
                 window = cv2.resize(window, (self.image_width, self.image_height))
-
             window = np.array(window, dtype=np.float)
             window /= 255.0
 
