@@ -34,7 +34,7 @@ class Classification:
         model.add(keras.layers.Dropout(0.5))
         model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_1"))
         model.add(keras.layers.Dense(units=256, activation='relu', name="dense_class_2"))
-        model.add(keras.layers.Dense(units=20, activation='softmax', name="out_class"))
+        model.add(keras.layers.Dense(units=21, activation='softmax', name="out_class"))
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         model.summary()
         return model

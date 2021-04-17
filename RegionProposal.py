@@ -86,7 +86,7 @@ class RegionProposal:
         model.load_weights(self.weight_file)
         window_width = self.window_width
         window_height = self.window_height
-        scales = range(2, 6)
+        scales = range(1, 6)
         overlap = 0.5
         for scale in scales:
             image_width = scale * window_width
@@ -107,10 +107,10 @@ class RegionProposal:
                     window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
                     window = window / 255.0
                     prediction = model.predict(window, 1)[0]
-                    true_xmin = round(x_offset * resize_x)
-                    true_ymin = round(y_offset * resize_y)
-                    true_xmax = true_xmin + round(window_width * resize_x)
-                    true_ymax = true_ymin + round(window_height * resize_y)
+                    true_xmin = int(x_offset * resize_x)
+                    true_ymin = int(y_offset * resize_y)
+                    true_xmax = true_xmin + int(window_width * resize_x)
+                    true_ymax = true_ymin + int(window_height * resize_y)
                     window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
                     result.append(window_result)
         return result

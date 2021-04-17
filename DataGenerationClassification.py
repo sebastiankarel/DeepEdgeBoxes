@@ -11,7 +11,7 @@ class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, use_augmentation):
         self.class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
                              'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
-                             'sofa', 'tvmonitor']
+                             'sofa', 'tvmonitor', 'none']
         self.batch_size = batch_size
         self.labels_dir = labels_dir
         labels = []
@@ -27,7 +27,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.image_height = image_height
         self.channels = 3
         self.indexes = np.arange(len(self.labels))
-        self.label_dim = 20
+        self.label_dim = 21
         self.use_augmentation = use_augmentation
         self.on_epoch_end()
 
@@ -79,60 +79,86 @@ class DataGenerator(tf.keras.utils.Sequence):
                 xmax = int(bndbox.find('xmax').text)
                 ymax = int(bndbox.find('ymax').text)
                 bboxes.append((xmin, ymin, xmax, ymax, label))
-            target_box = random.choice(bboxes)
-            bboxes.remove(target_box)
 
-            # Create label vector
-            label_vec = np.zeros(self.label_dim, dtype=np.float)
-            label_vec[target_box[4]] = 1.0
+            if np.random.randint(0, 100) <= 10:
+                # Create none class window
+                # Create label vector
+                label_vec = np.zeros(self.label_dim, dtype=np.float)
+                label_vec[20] = 1.0
 
-            # Find image region with object (bbox + margin)
-            if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
-                margin = int(float(target_box[2] - target_box[0]) * 0.2)
-                window_xmin = max(target_box[0] - margin, 0)
-                window_xmax = min(target_box[2] + margin, orig_width)
-                window_ymin = max(target_box[1] - margin, 0)
-                window_ymax = min(target_box[3] + margin, orig_height)
-                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
-            else:
-                margin = int(float(target_box[3] - target_box[1]) * 0.2)
-                window_ymin = max(target_box[1] - margin, 0)
-                window_ymax = min(target_box[3] + margin, orig_height)
-                window_xmin = max(target_box[0] - margin, 0)
-                window_xmax = min(target_box[2] + margin, orig_width)
-                cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
-
-            if self.use_augmentation:
-                # Augment 50% of data points
-                if np.random.randint(0, 100) <= 50:
-                    rand_val = np.random.randint(0, 3)
-                    # Resize to min 50% of size
-                    if rand_val == 0:
-                        aspect_ration = float(cutout.shape[1]) / float(cutout.shape[0])
-                        new_height = float(cutout.shape[0]) * np.random.uniform(0.5, 1.0)
-                        new_width = new_height * aspect_ration
-                        cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
-                    # Rotate by max +/- 90°
-                    elif rand_val == 1:
-                        angle = round(np.random.uniform(-1, 1) * 90.0)
-                        image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
-                        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-                        cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)
-                    # Flip image vertically
+                # Mask out any objects with white noise
+                for box in bboxes:
+                    if np.random.randint(0, 100) <= 50:
+                        result[box[1]:box[3], box[0]:box[2]] = np.random.uniform(0, 255, (box[3] - box[1], box[2] - box[0], 3))
                     else:
-                        cutout = cv2.flip(cutout, 1)
+                        result[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], 3))
 
-            # Place image region centred on square black background
-            if cutout.shape[1] > cutout.shape[0]:
-                window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
-                margin = int((window.shape[0] - cutout.shape[0]) / 2)
-                window[margin:(margin + cutout.shape[0]), :, :] = cutout
+                # Cut out random window
+                scale = np.random.randint(1, 6)
+                rescaled_width = scale * orig_width
+                rescaled_height = scale * orig_height
+                result = cv2.resize(result, (rescaled_width, rescaled_height))
+                xmin = np.random.randint(0, rescaled_width - self.image_width)
+                ymin = np.random.randint(0, rescaled_height - self.image_height)
+                xmax = xmin + self.image_width
+                ymax = ymin + self.image_height
+                window = result[ymin:ymax, xmin:xmax]
             else:
-                window = np.zeros((cutout.shape[0], cutout.shape[0], 3))
-                margin = int((window.shape[1] - cutout.shape[1]) / 2)
-                window[:, margin:(margin + cutout.shape[1]), :] = cutout
+                # Create object class window
+                # Select random target object
+                target_box = random.choice(bboxes)
+                bboxes.remove(target_box)
+                # Create label vector
+                label_vec = np.zeros(self.label_dim, dtype=np.float)
+                label_vec[target_box[4]] = 1.0
 
-            window = cv2.resize(window, (self.image_width, self.image_height))
+                # Find image region with object (bbox + margin)
+                if target_box[2] - target_box[0] > target_box[3] - target_box[1]:
+                    margin = int(float(target_box[2] - target_box[0]) * 0.2)
+                    window_xmin = max(target_box[0] - margin, 0)
+                    window_xmax = min(target_box[2] + margin, orig_width)
+                    window_ymin = max(target_box[1] - margin, 0)
+                    window_ymax = min(target_box[3] + margin, orig_height)
+                    cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
+                else:
+                    margin = int(float(target_box[3] - target_box[1]) * 0.2)
+                    window_ymin = max(target_box[1] - margin, 0)
+                    window_ymax = min(target_box[3] + margin, orig_height)
+                    window_xmin = max(target_box[0] - margin, 0)
+                    window_xmax = min(target_box[2] + margin, orig_width)
+                    cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
+
+                if self.use_augmentation:
+                    # Augment 50% of data points
+                    if np.random.randint(0, 100) <= 50:
+                        rand_val = np.random.randint(0, 3)
+                        # Resize to min 50% of size
+                        if rand_val == 0:
+                            aspect_ration = float(cutout.shape[1]) / float(cutout.shape[0])
+                            new_height = float(cutout.shape[0]) * np.random.uniform(0.5, 1.0)
+                            new_width = new_height * aspect_ration
+                            cutout = cv2.resize(cutout, (int(new_width), int(new_height)))
+                        # Rotate by max +/- 90°
+                        elif rand_val == 1:
+                            angle = round(np.random.uniform(-1, 1) * 90.0)
+                            image_center = tuple(np.array(cutout.shape[1::-1]) / 2)
+                            rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+                            cutout = cv2.warpAffine(cutout, rot_mat, cutout.shape[1::-1], flags=cv2.INTER_LINEAR)
+                        # Flip image vertically
+                        else:
+                            cutout = cv2.flip(cutout, 1)
+
+                # Place image region centred on square black background
+                if cutout.shape[1] > cutout.shape[0]:
+                    window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
+                    margin = int((window.shape[0] - cutout.shape[0]) / 2)
+                    window[margin:(margin + cutout.shape[0]), :, :] = cutout
+                else:
+                    window = np.zeros((cutout.shape[0], cutout.shape[0], 3))
+                    margin = int((window.shape[1] - cutout.shape[1]) / 2)
+                    window[:, margin:(margin + cutout.shape[1]), :] = cutout
+
+                window = cv2.resize(window, (self.image_width, self.image_height))
 
             window = np.array(window, dtype=np.float)
             window /= 255.0
