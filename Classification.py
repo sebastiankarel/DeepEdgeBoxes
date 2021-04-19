@@ -3,6 +3,7 @@ from DataGenerationClassification import DataGenerator
 import os
 import cv2
 import numpy as np
+import math
 
 
 class Classification:
@@ -36,7 +37,7 @@ class Classification:
         model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_1"))
         model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=21, activation='softmax', name="out_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         return model
 
     def train_model(self, train_labels_dir, train_images_dir, test_labels_dir, test_images_dir, epochs, batch_size, load_weights):
@@ -54,7 +55,15 @@ class Classification:
             test_labels_dir,
             batch_size,
             self.image_width, self.image_height, False)
-        model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs)
+
+        def scheduler(epoch, lr):
+            if epoch >= 30 and epoch % 10 == 0:
+                return lr / 10.0
+            else:
+                return lr
+        callback = keras.callbacks.LearningRateScheduler(scheduler)
+
+        model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs, callbacks=[callback])
         model.save_weights(self.weight_file, overwrite=True)
 
     def predict(self, image):
