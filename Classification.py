@@ -33,10 +33,10 @@ class Classification:
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_1"))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_2"))
+        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_1"))
+        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=21, activation='softmax', name="out_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.00001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         return model
 
     def train_model(self, train_labels_dir, train_images_dir, test_labels_dir, test_images_dir, epochs, batch_size, load_weights):

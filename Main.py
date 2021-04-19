@@ -34,9 +34,9 @@ if __name__ == "__main__":
         "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
         "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
-        5,
+        50,
         18,
-        True
+        False
     )
 
     for fn in os.listdir("pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"):
