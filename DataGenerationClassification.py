@@ -80,7 +80,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymax = int(bndbox.find('ymax').text)
                 bboxes.append((xmin, ymin, xmax, ymax, label))
 
-            if np.random.randint(0, 21) <= 20:
+            if np.random.randint(0, 21) == 20:
                 # Create none class window
                 # Create label vector
                 label_vec = np.zeros(self.label_dim, dtype=np.float)
