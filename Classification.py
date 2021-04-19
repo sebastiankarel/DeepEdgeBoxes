@@ -33,12 +33,10 @@ class Classification:
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
-        model.add(keras.layers.Dropout(0.5))
         model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_1"))
-        model.add(keras.layers.Dense(units=256, activation='relu', name="dense_class_2"))
+        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=21, activation='softmax', name="out_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
-        model.summary()
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.00001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         return model
 
     def train_model(self, train_labels_dir, train_images_dir, test_labels_dir, test_images_dir, epochs, batch_size, load_weights):
@@ -76,6 +74,22 @@ class Classification:
         low_sigma = cv2.Canny(low_sigma, lower, upper)
         high_sigma = cv2.Canny(high_sigma, lower, upper)
         edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
+
+        # Zero padding to make square
+        if edge_image.shape[0] > edge_image.shape[1]:
+            x_padding = edge_image.shape[0] - edge_image.shape[1]
+            x_padding_start = round(x_padding / 2.0)
+            x_end = x_padding_start + edge_image.shape[1]
+            new_edge_image = np.zeros((edge_image.shape[0], edge_image.shape[1] + x_padding, edge_image.shape[2]))
+            new_edge_image[:, x_padding_start:x_end, :] = edge_image[:, :, :]
+            edge_image = new_edge_image
+        elif edge_image.shape[1] > edge_image.shape[0]:
+            y_padding = edge_image.shape[1] - edge_image.shape[0]
+            y_padding_top = round(y_padding / 2.0)
+            y_end = y_padding_top + edge_image.shape[0]
+            new_edge_image = np.zeros((edge_image.shape[0] + y_padding, edge_image.shape[1], edge_image.shape[2]))
+            new_edge_image[y_padding_top:y_end, :, :] = edge_image[:, :, :]
+            edge_image = new_edge_image
 
         # Run exhaustive sliding window
         result = []

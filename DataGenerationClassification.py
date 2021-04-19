@@ -80,7 +80,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 ymax = int(bndbox.find('ymax').text)
                 bboxes.append((xmin, ymin, xmax, ymax, label))
 
-            if np.random.randint(0, 100) <= 10:
+            if np.random.randint(0, 21) <= 20:
                 # Create none class window
                 # Create label vector
                 label_vec = np.zeros(self.label_dim, dtype=np.float)
@@ -88,10 +88,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
                 # Mask out any objects with white noise
                 for box in bboxes:
-                    if np.random.randint(0, 100) <= 50:
-                        result[box[1]:box[3], box[0]:box[2]] = np.random.uniform(0, 255, (box[3] - box[1], box[2] - box[0], 3))
-                    else:
-                        result[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], 3))
+                    result[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], 3))
 
                 # Cut out random window
                 scale = np.random.randint(1, 6)
