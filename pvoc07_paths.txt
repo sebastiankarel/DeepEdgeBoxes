@@ -1,0 +1,6 @@
+train_images pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages
+train_labels pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations
+test_images pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages
+test_labels pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations
+hed_out_dir data/hed
+original_out_dir data/original

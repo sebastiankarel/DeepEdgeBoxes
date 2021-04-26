@@ -35,9 +35,9 @@ class Classification:
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_1"))
-        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_class_2"))
+        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_class_2"))
         model.add(keras.layers.Dense(units=21, activation='softmax', name="out_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         return model
 
     def train_model(self, train_labels_dir, train_images_dir, test_labels_dir, test_images_dir, epochs, batch_size, load_weights):
@@ -57,7 +57,7 @@ class Classification:
             self.image_width, self.image_height, False)
 
         def scheduler(epoch, lr):
-            if epoch >= 30 and epoch % 10 == 0:
+            if epoch == 50:
                 return lr / 10.0
             else:
                 return lr
