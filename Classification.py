@@ -40,7 +40,7 @@ class Classification:
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
         return model
 
-    def train_model(self, train_labels_dir, train_images_dir, test_labels_dir, test_images_dir, epochs, batch_size, load_weights):
+    def train_model(self, train_labels_dir, train_images_dir, val_labels_dir, val_images_dir, epochs, batch_size, load_weights):
         model = self.__get_model()
         if load_weights:
             if os.path.isfile(self.weight_file):
@@ -50,9 +50,9 @@ class Classification:
             train_labels_dir,
             batch_size,
             self.image_width, self.image_height, True)
-        test_generator = DataGenerator(
-            test_images_dir,
-            test_labels_dir,
+        val_generator = DataGenerator(
+            val_images_dir,
+            val_labels_dir,
             batch_size,
             self.image_width, self.image_height, False)
 
@@ -63,8 +63,9 @@ class Classification:
                 return lr
         callback = keras.callbacks.LearningRateScheduler(scheduler)
 
-        model.fit(x=training_generator, validation_data=test_generator, use_multiprocessing=False, epochs=epochs, callbacks=[callback])
+        history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs, callbacks=[callback])
         model.save_weights(self.weight_file, overwrite=True)
+        return history
 
     def predict(self, image):
         orig_width = image.shape[1]
