@@ -30,10 +30,10 @@ if __name__ == "__main__":
     classifier = Classification(224, 224, "classifier_weights.h5")
 
     classifier.train_model(
-        "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
-        "pascalvoc2007/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
-        "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations",
-        "pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages",
+        "data/original/train/labels",
+        "data/original/train/images",
+        "data/original/val/labels",
+        "data/original/val/images",
         70,
         18,
         False
