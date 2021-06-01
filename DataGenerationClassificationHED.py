@@ -49,6 +49,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         y = np.empty((self.batch_size, self.label_dim))
         for i, f in enumerate(labels_temp):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
 
@@ -74,7 +75,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
                 # Mask out any objects with white noise
                 for box in bboxes:
-                    image[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], 3))
+                    image[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0]))
 
                 # Cut out random window
                 scale = np.random.randint(1, 6)
@@ -137,17 +138,18 @@ class DataGenerator(tf.keras.utils.Sequence):
 
                 # Place image region centred on square black background
                 if cutout.shape[1] > cutout.shape[0]:
-                    window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
+                    window = np.zeros((cutout.shape[1], cutout.shape[1]))
                     margin = int((window.shape[0] - cutout.shape[0]) / 2)
-                    window[margin:(margin + cutout.shape[0]), :, :] = cutout
+                    window[margin:(margin + cutout.shape[0]), :] = cutout
                 else:
-                    window = np.zeros((cutout.shape[0], cutout.shape[0], 3))
+                    window = np.zeros((cutout.shape[0], cutout.shape[0]))
                     margin = int((window.shape[1] - cutout.shape[1]) / 2)
-                    window[:, margin:(margin + cutout.shape[1]), :] = cutout
+                    window[:, margin:(margin + cutout.shape[1])] = cutout
 
                 window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
             window /= 255.0
+            window = np.reshape(window, (window.shape[0], window.shape[1], 1))
 
             x[i] = window
             y[i] = label_vec

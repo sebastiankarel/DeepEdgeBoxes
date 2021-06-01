@@ -1,21 +1,31 @@
 import keras
 from DataGenerationClassification import DataGenerator
+from DataGenerationClassificationHED import DataGenerator as DataGenHed
 import os
 import cv2
 import numpy as np
-import math
+from EdgeDetection import HED
 
 
 class Classification:
 
-    def __init__(self, image_width, image_height, weight_file):
+    def __init__(self, image_width, image_height, weight_file, use_hed):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
+        self.use_hed = use_hed
+        if use_hed:
+            self.hed = HED()
+        else:
+            self.hed = None
 
     def __get_model(self):
+        if self.use_hed:
+            channels = 1
+        else:
+            channels = 3
         model = keras.models.Sequential()
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, 3)))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, channels)))
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
         model.add(keras.layers.MaxPool2D(name="max_pool_1"))
         model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1"))
@@ -45,16 +55,28 @@ class Classification:
         if load_weights:
             if os.path.isfile(self.weight_file):
                 model.load_weights(self.weight_file)
-        training_generator = DataGenerator(
-            train_images_dir,
-            train_labels_dir,
-            batch_size,
-            self.image_width, self.image_height, True)
-        val_generator = DataGenerator(
-            val_images_dir,
-            val_labels_dir,
-            batch_size,
-            self.image_width, self.image_height, False)
+        if self.use_hed:
+            training_generator = DataGenHed(
+                train_images_dir,
+                train_labels_dir,
+                batch_size,
+                self.image_width, self.image_height, True)
+            val_generator = DataGenHed(
+                val_images_dir,
+                val_labels_dir,
+                batch_size,
+                self.image_width, self.image_height, False)
+        else:
+            training_generator = DataGenerator(
+                train_images_dir,
+                train_labels_dir,
+                batch_size,
+                self.image_width, self.image_height, True)
+            val_generator = DataGenerator(
+                val_images_dir,
+                val_labels_dir,
+                batch_size,
+                self.image_width, self.image_height, False)
 
         def scheduler(epoch, lr):
             if epoch == 50:
@@ -71,19 +93,23 @@ class Classification:
         orig_width = image.shape[1]
         orig_height = image.shape[0]
 
-        # Generate edge image
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        no_sigma = image.copy()
-        low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
-        high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
-        sigma = 0.33
-        v = np.median(image)
-        lower = int(max(0, (1.0 - sigma) * v))
-        upper = int(min(255, (1.0 + sigma) * v))
-        no_sigma = cv2.Canny(no_sigma, lower, upper)
-        low_sigma = cv2.Canny(low_sigma, lower, upper)
-        high_sigma = cv2.Canny(high_sigma, lower, upper)
-        edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
+        if self.use_hed:
+            edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
+            edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
+        else:
+            # Generate edge image
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            no_sigma = image.copy()
+            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
+            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
+            sigma = 0.33
+            v = np.median(image)
+            lower = int(max(0, (1.0 - sigma) * v))
+            upper = int(min(255, (1.0 + sigma) * v))
+            no_sigma = cv2.Canny(no_sigma, lower, upper)
+            low_sigma = cv2.Canny(low_sigma, lower, upper)
+            high_sigma = cv2.Canny(high_sigma, lower, upper)
+            edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
 
         # Zero padding to make square
         if edge_image.shape[0] > edge_image.shape[1]:
@@ -120,6 +146,8 @@ class Classification:
                 for y in range(0, steps):
                     y_offset = y * (window_height * overlap)
                     resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
+                    if self.use_hed:
+                        resized_image = np.reshape(resized_image, (resized_image.shape[0], resized_image.shape[1], 1))
                     xmin = int(x_offset)
                     xmax = int(x_offset + window_width)
                     ymin = int(y_offset)
