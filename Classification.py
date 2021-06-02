@@ -136,8 +136,8 @@ class Classification:
         scales = range(1, 6)
         overlap = 0.5
         for scale in scales:
-            image_width = scale * window_width
-            image_height = scale * window_height
+            image_width = round(scale * window_width)
+            image_height = round(scale * window_height)
             resize_x = float(orig_width) / float(image_width)
             resize_y = float(orig_height) / float(image_height)
             steps = int(((scale / overlap) - 1))

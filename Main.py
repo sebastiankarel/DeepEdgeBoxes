@@ -22,7 +22,7 @@ if __name__ == "__main__":
     class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
                     'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
                     'sofa', 'tvmonitor', 'none']
-    classifier = Classification(224, 224, "classifier_weights_hed.h5", use_hed=True)
+    classifier = Classification(224, 224, "classifier_weights.h5", use_hed=False)
     '''
     history = classifier.train_model(
         "data/hed/train/labels",
@@ -37,10 +37,17 @@ if __name__ == "__main__":
     for fn in os.listdir("pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"):
         image = cv2.imread(os.path.join("pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages", fn))
         prediction = classifier.predict(image)
+        maxes = np.zeros(20)
         for pred in prediction:
             label = np.argmax(pred[4])
             significance = pred[4][label]
-            if label != 20 and significance >= 0.5:
+            if label != 20:
+                if significance > maxes[label]:
+                    maxes[label] = significance
+        for pred in prediction:
+            label = np.argmax(pred[4])
+            significance = pred[4][label]
+            if label != 20 and maxes[label] - significance < 0.001:
                 print(class_labels[label])
                 cv2.rectangle(image, (pred[0], pred[1]), (pred[2], pred[3]), (0, 255, 0), 1)
         cv2.imshow("image", image)
