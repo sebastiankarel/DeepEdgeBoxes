@@ -7,6 +7,8 @@ from Classification import Classification
 import os
 import numpy as np
 import cv2
+import EdgeDetection as ed
+import xml.etree.ElementTree as et
 
 
 def init_tf_gpu():
@@ -17,40 +19,7 @@ def init_tf_gpu():
 
 
 if __name__ == "__main__":
-    init_tf_gpu()
+    pass
 
-    class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
-                    'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
-                    'sofa', 'tvmonitor', 'none']
-    classifier = Classification(224, 224, "classifier_weights.h5", use_hed=False)
-    '''
-    history = classifier.train_model(
-        "data/hed/train/labels",
-        "data/hed/train/images",
-        "data/hed/val/labels",
-        "data/hed/val/images",
-        70,
-        18,
-        False
-    )
-    '''
-    for fn in os.listdir("pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"):
-        image = cv2.imread(os.path.join("pascalvoc2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages", fn))
-        prediction = classifier.predict(image)
-        maxes = np.zeros(20)
-        for pred in prediction:
-            label = np.argmax(pred[4])
-            significance = pred[4][label]
-            if label != 20:
-                if significance > maxes[label]:
-                    maxes[label] = significance
-        for pred in prediction:
-            label = np.argmax(pred[4])
-            significance = pred[4][label]
-            if label != 20 and maxes[label] - significance < 0.001:
-                print(class_labels[label])
-                cv2.rectangle(image, (pred[0], pred[1]), (pred[2], pred[3]), (0, 255, 0), 1)
-        cv2.imshow("image", image)
-        cv2.waitKey(0)
 
 

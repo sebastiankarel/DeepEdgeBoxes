@@ -4,16 +4,18 @@ import numpy as np
 import cv2
 import xml.etree.ElementTree as et
 import random
+import EdgeDetection as ed
 
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, use_augmentation):
+    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, use_augmentation, multi_channel):
         self.class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
                              'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
                              'sofa', 'tvmonitor', 'none']
         self.batch_size = batch_size
         self.labels_dir = labels_dir
+        self.multi_channel = multi_channel
         labels = []
         for file_name in os.listdir(labels_dir):
             img_file = file_name.split(".")[0] + ".jpg"
@@ -25,7 +27,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.images_dir = images_dir
         self.image_width = image_width
         self.image_height = image_height
-        self.channels = 3
+        if multi_channel:
+            self.channels = 3
+        else:
+            self.channels = 1
         self.indexes = np.arange(len(self.labels))
         self.label_dim = 21
         self.use_augmentation = use_augmentation
@@ -53,18 +58,9 @@ class DataGenerator(tf.keras.utils.Sequence):
             orig_height = int(image.shape[0])
 
             # Generate edge image
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            no_sigma = image.copy()
-            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
-            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
-            sigma = 0.33
-            v = np.median(image)
-            lower = int(max(0, (1.0 - sigma) * v))
-            upper = int(min(255, (1.0 + sigma) * v))
-            no_sigma = cv2.Canny(no_sigma, lower, upper)
-            low_sigma = cv2.Canny(low_sigma, lower, upper)
-            high_sigma = cv2.Canny(high_sigma, lower, upper)
-            result = np.dstack((no_sigma, low_sigma, high_sigma))
+            result = ed.auto_canny(image, self.multi_channel)
+            if not self.multi_channel:
+                result = np.reshape(result, (result.shape[0], result.shape[1], 1))
 
             # Read ground truth
             bboxes = []
@@ -88,7 +84,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
                 # Mask out any objects with white noise
                 for box in bboxes:
-                    result[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], 3))
+                    result[box[1]:box[3], box[0]:box[2]] = np.zeros((box[3] - box[1], box[2] - box[0], self.channels))
 
                 # Cut out random window
                 scale = np.random.randint(1, 6)
@@ -149,18 +145,23 @@ class DataGenerator(tf.keras.utils.Sequence):
                         else:
                             cutout = cv2.flip(cutout, 1)
 
+                if not self.multi_channel:
+                    cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
+
                 # Place image region centred on square black background
                 if cutout.shape[1] > cutout.shape[0]:
-                    window = np.zeros((cutout.shape[1], cutout.shape[1], 3))
+                    window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
                     margin = int((window.shape[0] - cutout.shape[0]) / 2)
                     window[margin:(margin + cutout.shape[0]), :, :] = cutout
                 else:
-                    window = np.zeros((cutout.shape[0], cutout.shape[0], 3))
+                    window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
                     margin = int((window.shape[1] - cutout.shape[1]) / 2)
                     window[:, margin:(margin + cutout.shape[1]), :] = cutout
 
                 window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
+            if not self.multi_channel:
+                window = np.reshape(window, (window.shape[0], window.shape[1], 1))
             window /= 255.0
 
             x[i] = window

@@ -1,5 +1,6 @@
 import cv2 as cv
 import os
+import numpy as np
 
 # https://github.com/opencv/opencv/blob/master/samples/dnn/edge_detection.py
 # https://www.pyimagesearch.com/2019/03/04/holistically-nested-edge-detection-with-opencv-and-deep-learning/
@@ -55,3 +56,22 @@ class HED:
             out = out * 255
 
         return out
+
+
+def auto_canny(src_image, multi_channel=False):
+    image = src_image.copy()
+    image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    upper, _ = cv.threshold(image, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    lower = upper * 0.5
+    if multi_channel:
+        low_sigma = cv.GaussianBlur(image, (3, 3), 0)
+        high_sigma = cv.GaussianBlur(image, (5, 5), 0)
+        no_sigma = cv.Canny(image, lower, upper)
+        low_sigma = cv.Canny(low_sigma, lower, upper)
+        high_sigma = cv.Canny(high_sigma, lower, upper)
+        result = np.dstack((no_sigma, low_sigma, high_sigma))
+        return result
+    else:
+        blurred = cv.GaussianBlur(image, (3, 3), 0)
+        result = cv.Canny(blurred, lower, upper)
+        return result

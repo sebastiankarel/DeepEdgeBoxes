@@ -5,15 +5,17 @@ import os
 import cv2
 import numpy as np
 from EdgeDetection import HED
+import EdgeDetection as ed
 
 
 class Classification:
 
-    def __init__(self, image_width, image_height, weight_file, use_hed):
+    def __init__(self, image_width, image_height, weight_file, use_hed, use_multichannel):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
         self.use_hed = use_hed
+        self.use_multichannel = use_multichannel
         if use_hed:
             self.hed = HED()
         else:
@@ -23,7 +25,10 @@ class Classification:
         if self.use_hed:
             channels = 1
         else:
-            channels = 3
+            if self.use_multichannel:
+                channels = 3
+            else:
+                channels = 1
         model = keras.models.Sequential()
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, channels)))
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
@@ -71,21 +76,14 @@ class Classification:
                 train_images_dir,
                 train_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, True)
+                self.image_width, self.image_height, True, self.use_multichannel)
             val_generator = DataGenerator(
                 val_images_dir,
                 val_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, False)
+                self.image_width, self.image_height, False, self.use_multichannel)
 
-        def scheduler(epoch, lr):
-            if epoch == 50:
-                return lr / 10.0
-            else:
-                return lr
-        callback = keras.callbacks.LearningRateScheduler(scheduler)
-
-        history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs, callbacks=[callback])
+        history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
         return history
 
@@ -97,19 +95,9 @@ class Classification:
             edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
-            # Generate edge image
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            no_sigma = image.copy()
-            low_sigma = cv2.GaussianBlur(image, (3, 3), 0)
-            high_sigma = cv2.GaussianBlur(image, (5, 5), 0)
-            sigma = 0.33
-            v = np.median(image)
-            lower = int(max(0, (1.0 - sigma) * v))
-            upper = int(min(255, (1.0 + sigma) * v))
-            no_sigma = cv2.Canny(no_sigma, lower, upper)
-            low_sigma = cv2.Canny(low_sigma, lower, upper)
-            high_sigma = cv2.Canny(high_sigma, lower, upper)
-            edge_image = np.dstack((no_sigma, low_sigma, high_sigma))
+            edge_image = ed.auto_canny(image, self.use_multichannel)
+            if not self.use_multichannel:
+                edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
         # Zero padding to make square
         if edge_image.shape[0] > edge_image.shape[1]:
