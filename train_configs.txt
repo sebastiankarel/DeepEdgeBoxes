@@ -1,0 +1,10 @@
+train_images_dir=data/original/train/images
+train_labels_dir=data/original/train/labels
+val_images_dir=data/original/val/images
+val_labels_dir=data/original/val/labels
+hed_train_images_dir=data/hed/train/images
+hed_train_labels_dir=data/hed/train/labels
+hed_val_images_dir=data/hed/val/images
+hed_val_labels_dir=data/hed/val/labels
+
+

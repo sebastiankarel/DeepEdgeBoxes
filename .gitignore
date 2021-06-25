@@ -1,19 +1,16 @@
 *
 
 !.gitignore
-!Main.py
 !README.md
 !EdgeDetection.py
-!BoundingBoxRegression.py
-!RegionProposal.py
-!DataGenerationBBoxReg.py
-!DataGenerationProposal.py
 !Classification.py
 !DataGenerationClassification.py
 !pvoc07_util.py
 !pvoc07_paths.txt
 !DataGenerationClassificationHED.py
-!BoundingBoxClustering.py
-!kmeans_elbow_method.png
-!bbox_clusters.png
-!cluster_centers.txt
+!Train.py
+!train_configs.txt
+!BinaryClassification.py
+!DataGenBinaryClassification.py
+!DataGenBinaryClassificationHED.py
+!TrainBinary.py
