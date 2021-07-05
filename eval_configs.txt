@@ -1,0 +1,4 @@
+test_images_dir=data/original/test/images
+test_labels_dir=data/original/test/labels
+hed_test_images_dir=data/hed/test/images
+hed_test_labels_dir=data/hed/test/labels

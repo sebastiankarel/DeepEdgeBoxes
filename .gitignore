@@ -14,3 +14,9 @@
 !DataGenBinaryClassification.py
 !DataGenBinaryClassificationHED.py
 !TrainBinary.py
+!Eval.py
+!eval_configs.txt
+!TrainShape.py
+!ShapeRegression.py
+!DataGenShapeRegressionHED.py
+!DataGenShapeRegression.py

@@ -1,6 +1,6 @@
 import keras
-from DataGenBinaryClassification import DataGenerator
-from DataGenBinaryClassificationHED import DataGenerator as DataGenHed
+from DataGenShapeRegression import DataGenerator
+from DataGenShapeRegressionHED import DataGenerator as DataGenHed
 import os
 import cv2
 import numpy as np
@@ -44,16 +44,11 @@ class Classification:
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1", trainable=False))
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2", trainable=False))
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3", trainable=False))
-        model.add(keras.layers.MaxPool2D(name="max_pool_4"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1", trainable=False))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2", trainable=False))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3", trainable=False))
-        model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
-        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_bin_class_1"))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_bin_class_2"))
-        model.add(keras.layers.Dense(units=1, activation='sigmoid', name="out_bin_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.binary_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.add(keras.layers.Dense(units=128, activation='relu', name="dense_shape_reg_1"))
+        model.add(keras.layers.Dense(units=64, activation='relu', name="dense_shape_reg_2"))
+        model.add(keras.layers.Dense(units=2, activation='sigmoid', name="out_shape_reg"))
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.MeanSquaredError(), metrics=['accuracy'])
         if load_weights:
             if os.path.isfile(self.weight_file):
                 model.load_weights(self.weight_file)

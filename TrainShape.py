@@ -1,5 +1,5 @@
 import tensorflow as tf
-from Classification import Classification
+from ShapeRegression import Classification
 import sys
 
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     edge_type = "single_canny"
     batch_size = 18
-    epochs = 50
+    epochs = 25
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
@@ -31,7 +31,7 @@ if __name__ == "__main__":
             else:
                 print("Unknown argument {}. Ignoring it.".format(split[0]))
 
-    print("Read train_configs.txt")
+    print("Read training configs.txt")
     file = open("train_configs.txt", "r")
     lines = file.readlines()
 
@@ -41,11 +41,18 @@ if __name__ == "__main__":
     val_labels_dir = ""
 
     if edge_type == "multi_canny":
-        weight_file = "classifier_weights_multi.h5"
+        class_weight_file = "classifier_weights_multi.h5"
     elif edge_type == "hed":
-        weight_file = "classifier_weights_hed.h5"
+        class_weight_file = "classifier_weights_hed.h5"
     else:
-        weight_file = "classifier_weights.h5"
+        class_weight_file = "classifier_weights.h5"
+
+    if edge_type == "multi_canny":
+        weight_file = "shape_classifier_weights_multi.h5"
+    elif edge_type == "hed":
+        weight_file = "shape_classifier_weights_hed.h5"
+    else:
+        weight_file = "shape_classifier_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -72,8 +79,8 @@ if __name__ == "__main__":
                 elif split[0] == "hed_val_labels_dir":
                     val_labels_dir = split[1]
 
-    classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
     print("Starting training...")
+    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
