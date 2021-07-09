@@ -1,6 +1,6 @@
 import keras
-from DataGenShapeRegression import DataGenerator
-from DataGenShapeRegressionHED import DataGenerator as DataGenHed
+from DataGenRegression import DataGenerator
+from DataGenRegressionHED import DataGenerator as DataGenHed
 import os
 import cv2
 import numpy as np
@@ -8,7 +8,7 @@ from EdgeDetection import HED
 import EdgeDetection as ed
 
 
-class Classification:
+class Regression:
 
     def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel):
         self.image_width = image_width
@@ -47,7 +47,7 @@ class Classification:
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dense(units=128, activation='relu', name="dense_shape_reg_1"))
         model.add(keras.layers.Dense(units=64, activation='relu', name="dense_shape_reg_2"))
-        model.add(keras.layers.Dense(units=2, activation='sigmoid', name="out_shape_reg"))
+        model.add(keras.layers.Dense(units=4, activation='sigmoid', name="out_shape_reg"))
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.MeanSquaredError(), metrics=['accuracy'])
         if load_weights:
             if os.path.isfile(self.weight_file):
@@ -88,69 +88,31 @@ class Classification:
         return history
 
     def predict(self, image):
+        model = self.__get_model()
         orig_width = image.shape[1]
         orig_height = image.shape[0]
 
         if self.use_hed:
             edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
+            edge_image = cv2.resize(edge_image, (self.image_width, self.image_height))
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
             edge_image = ed.auto_canny(image, self.use_multichannel)
+            edge_image = cv2.resize(edge_image, (self.image_width, self.image_height))
             if not self.use_multichannel:
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
+        edge_image = np.reshape(edge_image, (1, edge_image.shape[0], edge_image.shape[1], edge_image.shape[2]))
+        prediction = model.predict(edge_image, 1)[0]
 
-        # Zero padding to make square
-        if edge_image.shape[0] > edge_image.shape[1]:
-            x_padding = edge_image.shape[0] - edge_image.shape[1]
-            x_padding_start = round(x_padding / 2.0)
-            x_end = x_padding_start + edge_image.shape[1]
-            new_edge_image = np.zeros((edge_image.shape[0], edge_image.shape[1] + x_padding, edge_image.shape[2]))
-            new_edge_image[:, x_padding_start:x_end, :] = edge_image[:, :, :]
-            edge_image = new_edge_image
-        elif edge_image.shape[1] > edge_image.shape[0]:
-            y_padding = edge_image.shape[1] - edge_image.shape[0]
-            y_padding_top = round(y_padding / 2.0)
-            y_end = y_padding_top + edge_image.shape[0]
-            new_edge_image = np.zeros((edge_image.shape[0] + y_padding, edge_image.shape[1], edge_image.shape[2]))
-            new_edge_image[y_padding_top:y_end, :, :] = edge_image[:, :, :]
-            edge_image = new_edge_image
+        prediction[0] *= orig_width
+        prediction[1] *= orig_height
+        prediction[2] *= orig_width
+        prediction[3] *= orig_height
 
-        # Run exhaustive sliding window
-        result = []
-        model = self.__get_model()
-        model.load_weights(self.weight_file)
-        window_width = self.image_width
-        window_height = self.image_height
-        scales = range(1, 6)
-        overlap = 0.5
-        for scale in scales:
-            image_width = round(scale * window_width)
-            image_height = round(scale * window_height)
-            resize_x = float(orig_width) / float(image_width)
-            resize_y = float(orig_height) / float(image_height)
-            steps = int(((scale / overlap) - 1))
-            for x in range(0, steps):
-                x_offset = x * (window_width * overlap)
-                for y in range(0, steps):
-                    y_offset = y * (window_height * overlap)
-                    resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
-                    if self.use_hed:
-                        resized_image = np.reshape(resized_image, (resized_image.shape[0], resized_image.shape[1], 1))
-                    xmin = int(x_offset)
-                    xmax = int(x_offset + window_width)
-                    ymin = int(y_offset)
-                    ymax = int(y_offset + window_height)
-                    window = resized_image[ymin:ymax, xmin:xmax]
-                    if self.use_multichannel:
-                        window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
-                    else:
-                        window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
-                    window = window / 255.0
-                    prediction = model.predict(window, 1)[0]
-                    true_xmin = int(x_offset * resize_x)
-                    true_ymin = int(y_offset * resize_y)
-                    true_xmax = true_xmin + int(window_width * resize_x)
-                    true_ymax = true_ymin + int(window_height * resize_y)
-                    window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
-                    result.append(window_result)
+        result = np.zeros(len(prediction), dtype=np.int)
+        result[0] = int(prediction[0])
+        result[1] = int(prediction[1])
+        result[2] = int(prediction[2])
+        result[3] = int(prediction[3])
+
         return result

@@ -24,7 +24,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.image_height = image_height
         self.channels = 1
         self.indexes = np.arange(len(self.labels))
-        self.label_dim = 2
+        self.label_dim = 4
         self.use_augmentation = use_augmentation
         self.on_epoch_end()
 
@@ -72,7 +72,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             # Cut out image region with random margin
             if box_width > box_height:
-                x_offset = float(box_width) * 0.2
+                x_offset = float(box_width) * 0.4
                 x_min_margin = int(x_offset * np.random.random())
                 x_max_margin = int(x_offset) - x_min_margin
                 window_xmin = max(target_box[0] - x_min_margin, 0)
@@ -84,7 +84,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_ymin = max(target_box[1] - y_min_margin, 0)
                 window_ymax = min(target_box[3] + y_max_margin, orig_height)
             else:
-                y_offset = float(box_height) * 0.2
+                y_offset = float(box_height) * 0.4
                 y_min_margin = int(y_offset * np.random.random())
                 y_max_margin = int(y_offset) - y_min_margin
                 window_ymin = max(target_box[1] - y_min_margin, 0)
@@ -96,6 +96,8 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmin = max(target_box[0] - x_min_margin, 0)
                 window_xmax = min(target_box[2] + x_max_margin, orig_width)
             cutout = image[window_ymin:window_ymax, window_xmin:window_xmax]
+
+            cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
 
             # Pad image to make square
             if cutout.shape[1] > cutout.shape[0]:
@@ -110,17 +112,16 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window = cutout
 
             # Compute relative width and height
-            label_x = float(box_width) / float(window.shape[1])
-            label_y = float(box_height) / float(window.shape[0])
+            label_vec = np.zeros(self.label_dim, dtype=np.float)
+            label_vec[0] = float(target_box[0] - window_xmin) / float(window.shape[1])
+            label_vec[1] = float(target_box[1] - window_ymin) / float(window.shape[0])
+            label_vec[2] = float(window_xmax - target_box[2]) / float(window.shape[1])
+            label_vec[3] = float(window_ymax - target_box[3]) / float(window.shape[0])
 
             window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
             window /= 255.0
             window = np.reshape(window, (window.shape[0], window.shape[1], 1))
-
-            label_vec = np.zeros(self.label_dim, dtype=np.float)
-            label_vec[0] = label_x
-            label_vec[1] = label_y
 
             x[i] = window
             y[i] = label_vec

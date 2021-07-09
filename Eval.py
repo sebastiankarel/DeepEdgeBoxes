@@ -1,5 +1,6 @@
 import tensorflow as tf
 from BinaryClassification import Classification
+from BoundinBoxRegression import Regression
 import sys
 import os
 import cv2
@@ -63,12 +64,15 @@ if __name__ == "__main__":
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
         class_weight_file = "classifier_weights_multi.h5"
+        reg_weight_file = "shape_classifier_weights_multi.h5.h5"
     elif edge_type == "hed":
         weight_file = "bin_classifier_weights_hed.h5"
         class_weight_file = "classifier_weights_hed.h5"
+        reg_weight_file = "shape_classifier_weights_hed.h5.h5"
     else:
         weight_file = "bin_classifier_weights.h5"
         class_weight_file = "classifier_weights.h5"
+        reg_weight_file = "shape_classifier_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -88,6 +92,7 @@ if __name__ == "__main__":
                     test_labels_dir = split[1]
 
     classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
+    regression = Regression(224, 224, class_weights=class_weight_file, weight_file=reg_weight_file, use_hed=use_hed, use_multichannel=use_multi)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
@@ -108,7 +113,10 @@ if __name__ == "__main__":
                 has_prediction = False
                 for prediction in predictions:
                     if max_val - prediction[4] < 0.1:
-                        iou = compute_iou(ground_truth, prediction)
+                        cutout = image[prediction[1]:prediction[3], prediction[0]:prediction[2]]
+                        bbox_pred = regression.predict(cutout)
+                        cutout = cutout[bbox_pred[1]:bbox_pred[3], bbox_pred[0]:bbox_pred[2]]
+                        iou = compute_iou(ground_truth, bbox_pred)
                         if iou >= 0.5:
                             true_positives += 1
                             has_prediction = True

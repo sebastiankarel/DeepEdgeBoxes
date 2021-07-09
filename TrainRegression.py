@@ -1,5 +1,5 @@
 import tensorflow as tf
-from ShapeRegression import Classification
+from BoundinBoxRegression import Regression
 import sys
 
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
                     val_labels_dir = split[1]
 
     print("Starting training...")
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
+    classifier = Regression(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
