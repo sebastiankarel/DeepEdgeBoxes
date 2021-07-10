@@ -100,23 +100,25 @@ class DataGenerator(tf.keras.utils.Sequence):
             cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
 
             # Pad image to make square
+            x_margin = 0
+            y_margin = 0
             if cutout.shape[1] > cutout.shape[0]:
                 window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
-                margin = int(float(cutout.shape[1] - cutout.shape[0]) / 2.0)
-                window[margin:(margin + cutout.shape[0]), :, :] = cutout
+                y_margin = int(float(cutout.shape[1] - cutout.shape[0]) / 2.0)
+                window[y_margin:(y_margin + cutout.shape[0]), :, :] = cutout
             elif cutout.shape[1] < cutout.shape[0]:
                 window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
-                margin = int(float(cutout.shape[0] - cutout.shape[1]) / 2.0)
-                window[:, margin:(margin + cutout.shape[1]), :] = cutout
+                x_margin = int(float(cutout.shape[0] - cutout.shape[1]) / 2.0)
+                window[:, x_margin:(x_margin + cutout.shape[1]), :] = cutout
             else:
                 window = cutout
 
             # Compute relative width and height
             label_vec = np.zeros(self.label_dim, dtype=np.float)
-            label_vec[0] = float(target_box[0] - window_xmin) / float(window.shape[1])
-            label_vec[1] = float(target_box[1] - window_ymin) / float(window.shape[0])
-            label_vec[2] = float(window_xmax - target_box[2]) / float(window.shape[1])
-            label_vec[3] = float(window_ymax - target_box[3]) / float(window.shape[0])
+            label_vec[0] = float(target_box[0] - window_xmin + x_margin) / float(window.shape[1])
+            label_vec[1] = float(target_box[1] - window_ymin + y_margin) / float(window.shape[0])
+            label_vec[2] = float(target_box[2] - window_xmin + x_margin) / float(window.shape[1])
+            label_vec[3] = float(target_box[3] - window_ymin + y_margin) / float(window.shape[0])
 
             window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)

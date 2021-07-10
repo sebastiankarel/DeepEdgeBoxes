@@ -48,11 +48,11 @@ if __name__ == "__main__":
         class_weight_file = "classifier_weights.h5"
 
     if edge_type == "multi_canny":
-        weight_file = "shape_classifier_weights_multi.h5"
+        weight_file = "reg_weights_multi.h5"
     elif edge_type == "hed":
-        weight_file = "shape_classifier_weights_hed.h5"
+        weight_file = "reg_weights_hed.h5"
     else:
-        weight_file = "shape_classifier_weights.h5"
+        weight_file = "reg_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
