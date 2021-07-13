@@ -50,19 +50,17 @@ if __name__ == "__main__":
 
     test_images_dir = ""
     test_labels_dir = ""
+    original_images_dir = ""
 
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
         class_weight_file = "classifier_weights_multi.h5"
-        reg_weight_file = "shape_classifier_weights_multi.h5.h5"
     elif edge_type == "hed":
         weight_file = "bin_classifier_weights_hed.h5"
         class_weight_file = "classifier_weights_hed.h5"
-        reg_weight_file = "shape_classifier_weights_hed.h5.h5"
     else:
         weight_file = "bin_classifier_weights.h5"
         class_weight_file = "classifier_weights.h5"
-        reg_weight_file = "shape_classifier_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -76,7 +74,9 @@ if __name__ == "__main__":
                 elif split[0] == "test_labels_dir":
                     test_labels_dir = split[1]
             elif edge_type == "hed":
-                if split[0] == "hed_test_images_dir":
+                if split[0] == "test_images_dir":
+                    original_images_dir = split[1].strip()
+                elif split[0] == "hed_test_images_dir":
                     test_images_dir = split[1]
                 elif split[0] == "hed_test_labels_dir":
                     test_labels_dir = split[1]
@@ -91,6 +91,8 @@ if __name__ == "__main__":
     for i, label_file_name in enumerate(labels):
         image_file_name = label_file_name.split(".")[0] + ".jpg"
         image = cv2.imread(os.path.join(test_images_dir, image_file_name))
+        if edge_type == "hed":
+            original_image = cv2.imread(os.path.join(original_images_dir, image_file_name))
         if image is not None:
             print("Evaluating image {} of {}".format(i, len(labels)))
             ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
@@ -99,6 +101,8 @@ if __name__ == "__main__":
             for ground_truth in ground_truths:
                 for prediction in predictions:
                     if prediction[4] > 0.75:
+                        if edge_type == "hed":
+                            image = original_image
                         cv2.rectangle(image, (prediction[0], prediction[1]), (prediction[2], prediction[3]), (0, 255, 0), 1)
             cv2.imshow("result", image)
             cv2.waitKey()
