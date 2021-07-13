@@ -15,8 +15,5 @@
 !DataGenBinaryClassificationHED.py
 !TrainBinary.py
 !Eval.py
+!EvalVisual.py
 !eval_configs.txt
-!TrainRegression.py
-!BoundinBoxRegression.py
-!DataGenRegressionHED.py
-!DataGenRegression.py

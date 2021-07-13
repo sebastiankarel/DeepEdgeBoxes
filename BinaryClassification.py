@@ -10,7 +10,7 @@ import EdgeDetection as ed
 
 class Classification:
 
-    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel):
+    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, hed=None):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
@@ -18,7 +18,7 @@ class Classification:
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
         if use_hed:
-            self.hed = HED()
+            self.hed = hed
         else:
             self.hed = None
 
@@ -92,7 +92,11 @@ class Classification:
         model.save_weights(self.weight_file, overwrite=True)
         return history
 
-    def predict(self, image):
+    @staticmethod
+    def __mask_out_region(window, xmin, ymin, xmax, ymax):
+        return cv2.rectangle(window.copy(), (xmin, ymin), (xmax, ymax), (0, 0, 0), -1)
+
+    def predict(self, image, use_refinement=True):
         orig_width = image.shape[1]
         orig_height = image.shape[0]
 
@@ -126,11 +130,18 @@ class Classification:
         model.load_weights(self.weight_file)
         window_width = self.image_width
         window_height = self.image_height
+        mask_width = int(float(self.image_width) * 0.25)
+        mask_steps_x = 4
+        mask_height = int(float(self.image_height) * 0.25)
+        mask_steps_y = 4
         scales = range(1, 6)
         overlap = 0.5
         for scale in scales:
             image_width = round(scale * window_width)
             image_height = round(scale * window_height)
+            resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
+            if self.use_hed:
+                resized_image = np.reshape(resized_image, (resized_image.shape[0], resized_image.shape[1], 1))
             resize_x = float(orig_width) / float(image_width)
             resize_y = float(orig_height) / float(image_height)
             steps = int(((scale / overlap) - 1))
@@ -138,9 +149,6 @@ class Classification:
                 x_offset = x * (window_width * overlap)
                 for y in range(0, steps):
                     y_offset = y * (window_height * overlap)
-                    resized_image = np.array(cv2.resize(edge_image, (image_width, image_height)), dtype=np.float)
-                    if self.use_hed:
-                        resized_image = np.reshape(resized_image, (resized_image.shape[0], resized_image.shape[1], 1))
                     xmin = int(x_offset)
                     xmax = int(x_offset + window_width)
                     ymin = int(y_offset)
@@ -151,11 +159,52 @@ class Classification:
                     else:
                         window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
                     window = window / 255.0
-                    prediction = model.predict(window, 1)[0]
-                    true_xmin = int(x_offset * resize_x)
-                    true_ymin = int(y_offset * resize_y)
-                    true_xmax = true_xmin + int(window_width * resize_x)
-                    true_ymax = true_ymin + int(window_height * resize_y)
-                    window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+
+                    mask_x_min = 0
+                    mask_x_max = 0
+                    mask_y_min = 0
+                    mask_y_max = 0
+
+                    original_prediction = model.predict(window, 1)[0]
+                    # Mask out areas and reevaluate for box refinement
+                    if use_refinement and original_prediction >= 0.75:
+                        for i in range(mask_steps_x):
+                            new_window = self.__mask_out_region(window, 0, 0, i * mask_width, self.image_height)
+                            new_prediction = model.predict(new_window, 1)[0]
+                            if original_prediction < new_prediction:
+                                window = new_window
+                                mask_x_min = i * mask_width
+                            else:
+                                break
+                        for i in range(mask_steps_x):
+                            new_window = self.__mask_out_region(window, self.image_width - i * mask_width, 0, self.image_width, self.image_height)
+                            new_prediction = model.predict(new_window, 1)[0]
+                            if original_prediction < new_prediction:
+                                window = new_window
+                                mask_x_max = i * mask_width
+                            else:
+                                break
+                        for i in range(mask_steps_y):
+                            new_window = self.__mask_out_region(window, 0, 0, self.image_width, i * mask_height)
+                            new_prediction = model.predict(new_window, 1)[0]
+                            if original_prediction < new_prediction:
+                                window = new_window
+                                mask_y_min = i * mask_height
+                            else:
+                                break
+                        for i in range(mask_steps_y):
+                            new_window = self.__mask_out_region(window, 0, self.image_height - i * mask_height, self.image_width, self.image_height)
+                            new_prediction = model.predict(new_window, 1)[0]
+                            if original_prediction < new_prediction:
+                                window = new_window
+                                mask_y_max = i * mask_height
+                            else:
+                                break
+
+                    true_xmin = int((x_offset + mask_x_min) * resize_x)
+                    true_ymin = int((y_offset + mask_y_min) * resize_y)
+                    true_xmax = true_xmin + int((window_width - mask_x_max) * resize_x)
+                    true_ymax = true_ymin + int((window_height - mask_y_max) * resize_y)
+                    window_result = [true_xmin, true_ymin, true_xmax, true_ymax, original_prediction]
                     result.append(window_result)
         return result

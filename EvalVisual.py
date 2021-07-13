@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import xml.etree.ElementTree as et
+from EdgeDetection import HED
 
 
 def init_tf_gpu():
@@ -12,16 +13,6 @@ def init_tf_gpu():
     config.gpu_options.allow_growth = True
     sess = tf.compat.v1.Session(config=config)
     tf.compat.v1.keras.backend.set_session(sess)
-
-
-def compute_iou(ground_truth, prediction):
-    x_overlap = max(0, min(ground_truth[2], prediction[2]) - max(ground_truth[0], prediction[0]))
-    y_overlap = max(0, min(ground_truth[3], prediction[3]) - max(ground_truth[1], prediction[1]))
-    intersection = float(x_overlap * y_overlap)
-    gt_area = (ground_truth[2] - ground_truth[0]) * (ground_truth[3] - ground_truth[1])
-    pred_area = (prediction[2] - prediction[0]) * (prediction[3] - prediction[1])
-    union = float(gt_area + pred_area) - intersection
-    return intersection / union
 
 
 def read_label_file(file_name):
@@ -90,14 +81,13 @@ if __name__ == "__main__":
                 elif split[0] == "hed_test_labels_dir":
                     test_labels_dir = split[1]
 
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
+    hed = HED()
+    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, hed=hed)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
     labels = os.listdir(test_labels_dir)
 
-    true_positives = 0
-    false_negatives = 0
     for i, label_file_name in enumerate(labels):
         image_file_name = label_file_name.split(".")[0] + ".jpg"
         image = cv2.imread(os.path.join(test_images_dir, image_file_name))
@@ -106,21 +96,10 @@ if __name__ == "__main__":
             ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
             predictions = classifier.predict(image)
             predictions = np.array(predictions)
-            max_val = np.amax(predictions[:, 4])
             for ground_truth in ground_truths:
-                has_prediction = False
                 for prediction in predictions:
-                    if max_val - prediction[4] < 0.1:
-                        iou = compute_iou(ground_truth, (prediction[0], prediction[1], prediction[2], prediction[3]))
-                        if iou >= 0.5:
-                            true_positives += 1
-                            has_prediction = True
-                if not has_prediction:
-                    false_negatives += 1
+                    if prediction[4] > 0.75:
+                        cv2.rectangle(image, (prediction[0], prediction[1]), (prediction[2], prediction[3]), (0, 255, 0), 1)
+            cv2.imshow("result", image)
+            cv2.waitKey()
 
-        if true_positives + false_negatives > 0:
-            recall = float(true_positives) / float(true_positives + false_negatives)
-            print("Recall: {}".format(recall))
-
-    recall = float(true_positives) / float(true_positives + false_negatives)
-    print("Final Recall: {}".format(recall))
