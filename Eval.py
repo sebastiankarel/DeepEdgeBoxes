@@ -24,6 +24,27 @@ def compute_iou(ground_truth, prediction):
     return intersection / union
 
 
+def get_num_matching_predictions(ground_truths, predictions, class_threshold=0.5, iou_threshold=0.5):
+    best_predictions = []
+    for ground_truth in ground_truths:
+        best_prediction = (None, 0.0)
+        for prediction in predictions:
+            if prediction[4] > class_threshold:
+                iou = compute_iou(ground_truth, prediction)
+                if iou >= iou_threshold:
+                    if iou > best_prediction[1]:
+                        best_prediction = (prediction, iou)
+        best_predictions.append(best_prediction[0])
+    num_predicted = 0
+    num_missed = 0
+    for best in best_predictions:
+        if best is None:
+            num_missed += 1
+        else:
+            num_predicted += 1
+    return num_predicted, num_missed
+
+
 def read_label_file(file_name):
     bboxes = []
     tree = et.parse(file_name)
@@ -105,19 +126,9 @@ if __name__ == "__main__":
             print("Evaluating image {} of {}".format(i, len(labels)))
             ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
             predictions = classifier.predict(image)
-            predictions = np.array(predictions)
-            max_val = np.amax(predictions[:, 4])
-            for ground_truth in ground_truths:
-                has_prediction = False
-                for prediction in predictions:
-                    if max_val - prediction[4] < 0.1:
-                        iou = compute_iou(ground_truth, (prediction[0], prediction[1], prediction[2], prediction[3]))
-                        if iou >= 0.5:
-                            true_positives += 1
-                            has_prediction = True
-                if not has_prediction:
-                    false_negatives += 1
-
+            num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions)
+            true_positives += num_predicted
+            false_negatives += num_missed
         if true_positives + false_negatives > 0:
             recall = float(true_positives) / float(true_positives + false_negatives)
             print("Recall: {}".format(recall))

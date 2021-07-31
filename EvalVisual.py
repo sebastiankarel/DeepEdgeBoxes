@@ -29,6 +29,30 @@ def read_label_file(file_name):
     return np.array(bboxes)
 
 
+def compute_iou(ground_truth, prediction):
+    x_overlap = max(0, min(ground_truth[2], prediction[2]) - max(ground_truth[0], prediction[0]))
+    y_overlap = max(0, min(ground_truth[3], prediction[3]) - max(ground_truth[1], prediction[1]))
+    intersection = float(x_overlap * y_overlap)
+    gt_area = (ground_truth[2] - ground_truth[0]) * (ground_truth[3] - ground_truth[1])
+    pred_area = (prediction[2] - prediction[0]) * (prediction[3] - prediction[1])
+    union = float(gt_area + pred_area) - intersection
+    return intersection / union
+
+
+def get_best_predictions(ground_truths, predictions, class_threshold=0.5, iou_threshold=0.5):
+    result = []
+    for ground_truth in ground_truths:
+        best_prediction = (None, 0.0)
+        for prediction in predictions:
+            if prediction[4] > class_threshold:
+                iou = compute_iou(ground_truth, prediction)
+                if iou >= iou_threshold:
+                    if iou > best_prediction[1]:
+                        best_prediction = (prediction, iou)
+        result.append(best_prediction[0])
+    return result
+
+
 if __name__ == "__main__":
     init_tf_gpu()
 
@@ -91,19 +115,18 @@ if __name__ == "__main__":
     for i, label_file_name in enumerate(labels):
         image_file_name = label_file_name.split(".")[0] + ".jpg"
         image = cv2.imread(os.path.join(test_images_dir, image_file_name))
-        if edge_type == "hed":
-            original_image = cv2.imread(os.path.join(original_images_dir, image_file_name))
         if image is not None:
             print("Evaluating image {} of {}".format(i, len(labels)))
             ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
             predictions = classifier.predict(image)
-            predictions = np.array(predictions)
+            if edge_type == "hed":
+                # Replace hed image with original image for visual inspection
+                image = cv2.imread(os.path.join(original_images_dir, image_file_name))
+            best_predictions = get_best_predictions(ground_truths, predictions)
+            for prediction in best_predictions:
+                if prediction is not None:
+                    cv2.rectangle(image, (prediction[0], prediction[1]), (prediction[2], prediction[3]), (0, 255, 0), 1)
             for ground_truth in ground_truths:
-                for prediction in predictions:
-                    if prediction[4] > 0.75:
-                        if edge_type == "hed":
-                            image = original_image
-                        cv2.rectangle(image, (prediction[0], prediction[1]), (prediction[2], prediction[3]), (0, 255, 0), 1)
+                cv2.rectangle(image, (ground_truth[0], ground_truth[1]), (ground_truth[2], ground_truth[3]), (255, 0, 0), 1)
             cv2.imshow("result", image)
             cv2.waitKey()
-
