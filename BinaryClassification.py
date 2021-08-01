@@ -9,13 +9,14 @@ import EdgeDetection as ed
 
 class Classification:
 
-    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, hed=None):
+    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, use_rgb, hed=None):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
         self.class_weights = class_weights
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
+        self.use_rgb = use_rgb
         if use_hed:
             self.hed = hed
         else:
@@ -25,7 +26,7 @@ class Classification:
         if self.use_hed:
             channels = 1
         else:
-            if self.use_multichannel:
+            if self.use_multichannel or self.use_rgb:
                 channels = 3
             else:
                 channels = 1
@@ -80,12 +81,12 @@ class Classification:
                 train_images_dir,
                 train_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, True, self.use_multichannel)
+                self.image_width, self.image_height, True, self.use_multichannel, self.use_rgb)
             val_generator = DataGenerator(
                 val_images_dir,
                 val_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, False, self.use_multichannel)
+                self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
 
         history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
@@ -104,7 +105,7 @@ class Classification:
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
             edge_image = ed.auto_canny(image, self.use_multichannel)
-            if not self.use_multichannel:
+            if not self.use_multichannel and not self.use_rgb:
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
         # Zero padding to make square
@@ -149,7 +150,7 @@ class Classification:
                     ymin = int(y_offset)
                     ymax = int(y_offset + window_height)
                     window = resized_image[ymin:ymax, xmin:xmax]
-                    if self.use_multichannel:
+                    if self.use_multichannel or self.use_rgb:
                         window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
                     else:
                         window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))

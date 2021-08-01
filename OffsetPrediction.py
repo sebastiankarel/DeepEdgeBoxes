@@ -9,13 +9,14 @@ import EdgeDetection as ed
 
 class OffsetPrediction:
 
-    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, hed=None):
+    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, use_rgb, hed=None):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
         self.class_weights = class_weights
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
+        self.use_rgb = use_rgb
         if use_hed:
             self.hed = hed
         else:
@@ -25,7 +26,7 @@ class OffsetPrediction:
         if self.use_hed:
             channels = 1
         else:
-            if self.use_multichannel:
+            if self.use_multichannel or self.use_rgb:
                 channels = 3
             else:
                 channels = 1
@@ -75,12 +76,12 @@ class OffsetPrediction:
                 train_images_dir,
                 train_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, self.use_multichannel)
+                self.image_width, self.image_height, self.use_multichannel, self.use_rgb)
             val_generator = DataGenerator(
                 val_images_dir,
                 val_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, self.use_multichannel)
+                self.image_width, self.image_height, self.use_multichannel, self.use_rgb)
 
         history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
@@ -98,8 +99,8 @@ class OffsetPrediction:
                 edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
             else:
-                edge_image = ed.auto_canny(image, self.use_multichannel)
-                if not self.use_multichannel:
+                edge_image = ed.auto_canny(image, self.use_multichannel, self.use_rgb)
+                if not self.use_multichannel and not self.use_rgb:
                     edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
             # Zero padding to make square
@@ -119,7 +120,7 @@ class OffsetPrediction:
                 edge_image = new_edge_image
 
             resized_image = np.array(cv2.resize(edge_image, (self.image_width, self.image_height)), dtype=np.float)
-            if not self.use_multichannel:
+            if not self.use_multichannel and not self.use_rgb:
                 resized_image = np.reshape(resized_image, (1, resized_image.shape[0], resized_image.shape[1], 1))
             else:
                 resized_image = np.reshape(resized_image, (1, resized_image.shape[0], resized_image.shape[1], resized_image.shape[2]))

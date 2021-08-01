@@ -9,13 +9,14 @@ import EdgeDetection as ed
 
 class DataGenerator(tf.keras.utils.Sequence):
 
-    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, multi_channel):
+    def __init__(self, images_dir, labels_dir, batch_size, image_width, image_height, multi_channel, rgb):
         self.class_labels = ['person', 'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train', 'bird',
                              'cat', 'cow', 'dog', 'horse', 'sheep', 'bottle', 'chair', 'diningtable', 'pottedplant',
                              'sofa', 'tvmonitor', 'none']
         self.batch_size = batch_size
         self.labels_dir = labels_dir
         self.multi_channel = multi_channel
+        self.rgb = rgb
         labels = []
         for file_name in os.listdir(labels_dir):
             img_file = file_name.split(".")[0] + ".jpg"
@@ -27,7 +28,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.images_dir = images_dir
         self.image_width = image_width
         self.image_height = image_height
-        if multi_channel:
+        if multi_channel or rgb:
             self.channels = 3
         else:
             self.channels = 1
@@ -57,8 +58,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             orig_height = int(image.shape[0])
 
             # Generate edge image
-            result = ed.auto_canny(image, self.multi_channel)
-            if not self.multi_channel:
+            result = ed.auto_canny(image, self.multi_channel, self.rgb)
+            if not self.multi_channel and not self.rgb:
                 result = np.reshape(result, (result.shape[0], result.shape[1], 1))
 
             # Read ground truth
@@ -121,7 +122,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmax = min(target_box[2] + margin, orig_width)
                 cutout = result[window_ymin:window_ymax, window_xmin:window_xmax]
 
-            if not self.multi_channel:
+            if not self.multi_channel and not self.rgb:
                 cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
 
             # Place image region centred on square black background
@@ -136,7 +137,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
-            if not self.multi_channel:
+            if not self.multi_channel and not self.rgb:
                 window = np.reshape(window, (window.shape[0], window.shape[1], 1))
             window /= 255.0
 

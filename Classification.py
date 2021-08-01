@@ -77,12 +77,12 @@ class Classification:
                 train_images_dir,
                 train_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, True, self.use_multichannel)
+                self.image_width, self.image_height, True, self.use_multichannel, self.use_rgb)
             val_generator = DataGenerator(
                 val_images_dir,
                 val_labels_dir,
                 batch_size,
-                self.image_width, self.image_height, False, self.use_multichannel)
+                self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
 
         history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs)
         model.save_weights(self.weight_file, overwrite=True)
@@ -97,7 +97,7 @@ class Classification:
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
             edge_image = ed.auto_canny(image, self.use_multichannel, self.use_rgb)
-            if not self.use_multichannel or self.use_rgb:
+            if not self.use_multichannel and not self.use_rgb:
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
         # Zero padding to make square
