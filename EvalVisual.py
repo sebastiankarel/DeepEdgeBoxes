@@ -52,7 +52,7 @@ def refine_prediction(predictions, shapes, offsets):
             height = float(prediction[3] - prediction[1])
             width = float(prediction[2] - prediction[0])
             new_width = height * factor
-            offset = int((width - new_width) / 2.0) + (0.5/1.5 * width * x_offset)
+            offset = int(((width - new_width) / 2.0) + (0.5/1.5 * width * x_offset))
             result.append((prediction[0] + offset, prediction[1], prediction[2] - offset, prediction[3]))
         elif shape > 4:
             if shape == 5:
@@ -68,7 +68,7 @@ def refine_prediction(predictions, shapes, offsets):
             height = float(prediction[3] - prediction[1])
             width = float(prediction[2] - prediction[0])
             new_height = width * factor
-            offset = int((height - new_height) / 2.0) + (0.5/1.5 * height * y_offset)
+            offset = int(((height - new_height) / 2.0) + (0.5/1.5 * height * y_offset))
             result.append((prediction[0], prediction[1] + offset, prediction[2], prediction[3] - offset))
     return result
 
@@ -123,18 +123,22 @@ if __name__ == "__main__":
         weight_file = "bin_classifier_weights_multi.h5"
         class_weight_file = "classifier_weights_multi.h5"
         shape_weight_file = "shape_weights_multi.h5"
+        offset_weight_file = "offset_weights_multi.h5"
     elif edge_type == "rgb_canny":
         weight_file = "bin_classifier_weights_rgb.h5"
         class_weight_file = "classifier_weights_rgb.h5"
         shape_weight_file = "shape_weights_rgb.h5"
+        offset_weight_file = "offset_weights_rgb.h5"
     elif edge_type == "hed":
         weight_file = "bin_classifier_weights_hed.h5"
         class_weight_file = "classifier_weights_hed.h5"
         shape_weight_file = "shape_weights_hed.h5"
+        offset_weight_file = "offset_weights_hed.h5"
     else:
         weight_file = "bin_classifier_weights.h5"
         class_weight_file = "classifier_weights.h5"
         shape_weight_file = "shape_weights.h5"
+        offset_weight_file = "offset_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -151,7 +155,7 @@ if __name__ == "__main__":
     hed = HED()
     classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
     shape_pred = ShapePrediction(224, 224, class_weights=class_weight_file, weight_file=shape_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
-    offset_pred = OffsetPrediction(224, 224, class_weights=class_weight_file, weight_file=shape_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+    offset_pred = OffsetPrediction(224, 224, class_weights=class_weight_file, weight_file=offset_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
