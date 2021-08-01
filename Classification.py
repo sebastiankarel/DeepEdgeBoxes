@@ -10,12 +10,13 @@ import EdgeDetection as ed
 
 class Classification:
 
-    def __init__(self, image_width, image_height, weight_file, use_hed, use_multichannel):
+    def __init__(self, image_width, image_height, weight_file, use_hed, use_multichannel, use_rgb):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
+        self.use_rgb = use_rgb
         if use_hed:
             self.hed = HED()
         else:
@@ -25,7 +26,7 @@ class Classification:
         if self.use_hed:
             channels = 1
         else:
-            if self.use_multichannel:
+            if self.use_multichannel or self.use_rgb:
                 channels = 3
             else:
                 channels = 1
@@ -95,8 +96,8 @@ class Classification:
             edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
-            edge_image = ed.auto_canny(image, self.use_multichannel)
-            if not self.use_multichannel:
+            edge_image = ed.auto_canny(image, self.use_multichannel, self.use_rgb)
+            if not self.use_multichannel or self.use_rgb:
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
         # Zero padding to make square

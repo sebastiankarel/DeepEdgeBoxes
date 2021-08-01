@@ -58,20 +58,39 @@ class HED:
         return out
 
 
-def auto_canny(src_image, multi_channel=False):
+def auto_canny(src_image, multi_channel=False, rgb=False):
     image = src_image.copy()
-    image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    upper, _ = cv.threshold(image, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
-    lower = upper * 0.5
-    if multi_channel:
-        low_sigma = cv.GaussianBlur(image, (3, 3), 0)
-        high_sigma = cv.GaussianBlur(image, (5, 5), 0)
-        no_sigma = cv.Canny(image, lower, upper)
-        low_sigma = cv.Canny(low_sigma, lower, upper)
-        high_sigma = cv.Canny(high_sigma, lower, upper)
-        result = np.dstack((no_sigma, low_sigma, high_sigma))
+    if rgb:
+        r = image[:, :, 0]
+        g = image[:, :, 1]
+        b = image[:, :, 2]
+        upper_r, _ = cv.threshold(r, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+        upper_g, _ = cv.threshold(g, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+        upper_b, _ = cv.threshold(b, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+        lower_r = upper_r * 0.5
+        lower_g = upper_g * 0.5
+        lower_b = upper_b * 0.5
+        blurred_r = cv.GaussianBlur(r, (3, 3), 0)
+        blurred_g = cv.GaussianBlur(g, (3, 3), 0)
+        blurred_b = cv.GaussianBlur(b, (3, 3), 0)
+        result_r = cv.Canny(blurred_r, lower_r, upper_r)
+        result_g = cv.Canny(blurred_g, lower_g, upper_g)
+        result_b = cv.Canny(blurred_b, lower_b, upper_b)
+        result = np.dstack((result_r, result_g, result_b))
         return result
     else:
-        blurred = cv.GaussianBlur(image, (3, 3), 0)
-        result = cv.Canny(blurred, lower, upper)
-        return result
+        image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        upper, _ = cv.threshold(image, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+        lower = upper * 0.5
+        if multi_channel:
+            low_sigma = cv.GaussianBlur(image, (3, 3), 0)
+            high_sigma = cv.GaussianBlur(image, (5, 5), 0)
+            no_sigma = cv.Canny(image, lower, upper)
+            low_sigma = cv.Canny(low_sigma, lower, upper)
+            high_sigma = cv.Canny(high_sigma, lower, upper)
+            result = np.dstack((no_sigma, low_sigma, high_sigma))
+            return result
+        else:
+            blurred = cv.GaussianBlur(image, (3, 3), 0)
+            result = cv.Canny(blurred, lower, upper)
+            return result

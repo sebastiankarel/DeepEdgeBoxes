@@ -17,3 +17,11 @@
 !Eval.py
 !EvalVisual.py
 !eval_configs.txt
+!OffsetPrediction.py
+!TrainOffsetPrediction.py
+!DataGenOffsetPrediction.py
+!DataGenOffsetPredictionHED.py
+!ShapePrediction.py
+!DataGenShapePrediction.py
+!DataGenShapePredictionHED.py
+!TrainShapePrediction.py

@@ -100,16 +100,10 @@ if __name__ == "__main__":
     for line in lines:
         split = line.split("=")
         if len(split) == 2:
-            if edge_type == "single_canny" or edge_type == "multi_canny":
-                if split[0] == "test_images_dir":
-                    test_images_dir = split[1]
-                elif split[0] == "test_labels_dir":
-                    test_labels_dir = split[1]
-            elif edge_type == "hed":
-                if split[0] == "hed_test_images_dir":
-                    test_images_dir = split[1]
-                elif split[0] == "hed_test_labels_dir":
-                    test_labels_dir = split[1]
+            if split[0] == "test_images_dir":
+                test_images_dir = split[1]
+            elif split[0] == "test_labels_dir":
+                test_labels_dir = split[1]
 
     classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi)
     print("Starting evaluation")
