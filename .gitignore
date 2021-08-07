@@ -27,3 +27,6 @@
 !ClassificationVertical.py
 !DataGenerationClassificationHEDVertical.py
 !DataGenerationClassificationVertical.py
+!ClassificationHorizontal.py
+!DataGenerationClassificationHorizontal.py
+!DataGenerationClassificationHEDHorizontal.py

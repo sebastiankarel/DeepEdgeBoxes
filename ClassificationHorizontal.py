@@ -11,8 +11,8 @@ import EdgeDetection as ed
 class Classification:
 
     def __init__(self, image_width, image_height, weight_file, use_hed, use_multichannel, use_rgb):
-        if image_height is not image_width * 2:
-            raise ValueError('Image height must be 2 * image width.')
+        if image_width is not image_height * 2:
+            raise ValueError('Image width must be 2 * image height.')
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
