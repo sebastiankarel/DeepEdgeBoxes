@@ -1,5 +1,5 @@
 import tensorflow as tf
-from ShapePrediction import ShapePrediction
+from BBoxReg import OffsetPrediction
 import sys
 
 
@@ -15,12 +15,12 @@ if __name__ == "__main__":
 
     edge_type = "single_canny"
     batch_size = 18
-    epochs = 25
+    epochs = 40
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
             if split[0] == "edge_type":
-                if split[1] == "single_canny" or split[1] == "multi_canny" or split[1] == "hed" or split[1] == "rgb_canny":
+                if split[1] == "single_canny" or split[1] == "multi_canny" or split[1] == "hed" or split[0] == "rgb_canny":
                     edge_type = split[1]
                 else:
                     print("Unknown edge type {}. Using default single_canny".format(split[1]))
@@ -50,13 +50,13 @@ if __name__ == "__main__":
         class_weight_file = "classifier_weights.h5"
 
     if edge_type == "multi_canny":
-        weight_file = "shape_weights_multi.h5"
+        weight_file = "offset_weights_multi.h5"
     elif edge_type == "rgb_canny":
-        weight_file = "shape_weights_rgb.h5"
+        weight_file = "offset_weights_rgb.h5"
     elif edge_type == "hed":
-        weight_file = "shape_weights_hed.h5"
+        weight_file = "offset_weights_hed.h5"
     else:
-        weight_file = "shape_weights.h5"
+        weight_file = "offset_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -85,7 +85,7 @@ if __name__ == "__main__":
                     val_labels_dir = split[1]
 
     print("Starting training...")
-    classifier = ShapePrediction(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
+    classifier = OffsetPrediction(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),

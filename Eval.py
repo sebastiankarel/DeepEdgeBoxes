@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as et
 from ShapePrediction import ShapePrediction
-from OffsetPrediction import OffsetPrediction
+from BBoxReg import OffsetPrediction
 from EdgeDetection import HED
 
 

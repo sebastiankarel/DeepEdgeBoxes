@@ -7,7 +7,7 @@ import numpy as np
 import xml.etree.ElementTree as et
 from EdgeDetection import HED
 from ShapePrediction import ShapePrediction
-from OffsetPrediction import OffsetPrediction
+from BBoxReg import OffsetPrediction
 
 
 def init_tf_gpu():

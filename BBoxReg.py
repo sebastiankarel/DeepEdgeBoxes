@@ -1,13 +1,13 @@
 import keras
-from DataGenShapePrediction import DataGenerator
-from DataGenShapePredictionHED import DataGenerator as DataGenHed
+from DataGenBBoxReg import DataGenerator
+from DataGenBBoxRegHED import DataGenerator as DataGenHed
 import os
 import cv2
 import numpy as np
 import EdgeDetection as ed
 
 
-class ShapePrediction:
+class OffsetPrediction:
 
     def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, use_rgb, hed=None):
         self.image_width = image_width
@@ -47,8 +47,8 @@ class ShapePrediction:
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_shape_1"))
         model.add(keras.layers.Dense(units=512, activation='relu', name="dense_shape_2"))
-        model.add(keras.layers.Dense(units=9, activation='softmax', name="out_shape"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.add(keras.layers.Dense(units=2, activation='sigmoid', name="out_shape"))
+        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.mean_squared_error, metrics=[keras.metrics.Accuracy()])
         if load_weights:
             if os.path.isfile(self.weight_file):
                 model.load_weights(self.weight_file)
@@ -99,7 +99,7 @@ class ShapePrediction:
                 edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
             else:
-                edge_image = ed.auto_canny(image, self.use_multichannel)
+                edge_image = ed.auto_canny(image, self.use_multichannel, self.use_rgb)
                 if not self.use_multichannel and not self.use_rgb:
                     edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
