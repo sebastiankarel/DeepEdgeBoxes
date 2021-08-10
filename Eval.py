@@ -5,9 +5,9 @@ import os
 import cv2
 import numpy as np
 import xml.etree.ElementTree as et
-from ShapePrediction import ShapePrediction
 from BBoxReg import OffsetPrediction
 from EdgeDetection import HED
+import random
 
 
 def init_tf_gpu():
@@ -25,47 +25,6 @@ def compute_iou(ground_truth, prediction):
     pred_area = (prediction[2] - prediction[0]) * (prediction[3] - prediction[1])
     union = float(gt_area + pred_area) - intersection
     return intersection / union
-
-def refine_prediction(predictions, shapes, offsets):
-    result = []
-    for i, prediction in enumerate(predictions):
-        result.append(prediction)
-        shape = np.argmax(shapes[i])
-        x_offset = offsets[i][0]
-        y_offset = offsets[i][1]
-        if shape <= 3:
-            if shape == 0:
-                factor = 0.125
-            elif shape == 1:
-                factor = 0.375
-            elif shape == 2:
-                factor = 0.625
-            elif shape == 3:
-                factor = 0.875
-            else:
-                factor = 1.0
-            height = float(prediction[3] - prediction[1])
-            width = float(prediction[2] - prediction[0])
-            new_width = height * factor
-            offset = int(((width - new_width) / 2.0) + (0.5/1.5 * width * x_offset))
-            result.append((prediction[0] + offset, prediction[1], prediction[2] - offset, prediction[3]))
-        elif shape > 4:
-            if shape == 5:
-                factor = 0.875
-            elif shape == 6:
-                factor = 0.625
-            elif shape == 7:
-                factor = 0.375
-            elif shape == 8:
-                factor = 0.125
-            else:
-                factor = 1.0
-            height = float(prediction[3] - prediction[1])
-            width = float(prediction[2] - prediction[0])
-            new_height = width * factor
-            offset = int(((height - new_height) / 2.0) + (0.5/1.5 * height * y_offset))
-            result.append((prediction[0], prediction[1] + offset, prediction[2], prediction[3] - offset))
-    return result
 
 
 def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5):
@@ -127,23 +86,15 @@ if __name__ == "__main__":
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
         class_weight_file = "classifier_weights_multi.h5"
-        shape_weight_file = "shape_weights_multi.h5"
-        offset_weight_file = "offset_weights_multi.h5"
     elif edge_type == "rgb_canny":
         weight_file = "bin_classifier_weights_rgb.h5"
         class_weight_file = "classifier_weights_rgb.h5"
-        shape_weight_file = "shape_weights_rgb.h5"
-        offset_weight_file = "offset_weights_rgb.h5"
     elif edge_type == "hed":
         weight_file = "bin_classifier_weights_hed.h5"
         class_weight_file = "classifier_weights_hed.h5"
-        shape_weight_file = "shape_weights_hed.h5"
-        offset_weight_file = "offset_weights_hed.h5"
     else:
         weight_file = "bin_classifier_weights.h5"
         class_weight_file = "classifier_weights.h5"
-        shape_weight_file = "shape_weights.h5"
-        offset_weight_file = "offset_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -159,31 +110,31 @@ if __name__ == "__main__":
 
     hed = HED()
     classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
-    shape_pred = ShapePrediction(224, 224, class_weights=class_weight_file, weight_file=shape_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
-    offset_pred = OffsetPrediction(224, 224, class_weights=class_weight_file, weight_file=offset_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
     labels = os.listdir(test_labels_dir)
 
-    true_positives = 0
-    false_negatives = 0
-    for i, label_file_name in enumerate(labels):
-        image_file_name = label_file_name.split(".")[0] + ".jpg"
-        image = cv2.imread(os.path.join(test_images_dir, image_file_name))
-        if image is not None:
-            print("Evaluating image {} of {}".format(i, len(labels)))
-            ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
-            predictions = classifier.predict(image)
-            shapes = shape_pred.predict(image, predictions)
-            offsets = offset_pred.predict(image, predictions)
-            predictions = refine_prediction(predictions, shapes, offsets)
-            num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions)
-            true_positives += num_predicted
-            false_negatives += num_missed
-        if true_positives + false_negatives > 0:
-            recall = float(true_positives) / float(true_positives + false_negatives)
-            print("Recall: {}".format(recall))
+    for k in range(1, 6):
+        sample = random.sample(labels, 100)
+        true_positives = 0
+        false_negatives = 0
+        num_proposals = 0
+        for i, label_file_name in enumerate(sample):
+            image_file_name = label_file_name.split(".")[0] + ".jpg"
+            image = cv2.imread(os.path.join(test_images_dir, image_file_name))
+            if image is not None:
+                print("Evaluating image {} of {} (sample {} of {})".format(i, len(sample), k, 5))
+                ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
+                predictions = classifier.predict(image)
+                num_proposals += len(predictions)
+                num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions)
+                true_positives += num_predicted
+                false_negatives += num_missed
+            if true_positives + false_negatives > 0:
+                recall = float(true_positives) / float(true_positives + false_negatives)
+                print("Recall: {}".format(recall))
 
-    recall = float(true_positives) / float(true_positives + false_negatives)
-    print("Final Recall: {}".format(recall))
+        recall = float(true_positives) / float(true_positives + false_negatives)
+        print("Final Recall: {}".format(recall))
+        print("Average number of proposals: {}".format(num_proposals / len(sample)))
