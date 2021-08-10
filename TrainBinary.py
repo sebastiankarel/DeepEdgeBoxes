@@ -1,6 +1,5 @@
 import tensorflow as tf
 from BinaryClassification import Classification
-from BinaryClassificationVertical import Classification as ClassificationVertical
 import sys
 
 
@@ -42,30 +41,22 @@ if __name__ == "__main__":
     val_labels_dir = ""
 
     if edge_type == "multi_canny":
-        class_weight_file_square = "classifier_weights_multi.h5"
-        class_weight_file_vert = "classifier_weights_multi_vert.h5"
+        class_weight_file = "classifier_weights_multi.h5"
     elif edge_type == "hed":
-        class_weight_file_square = "classifier_weights_hed.h5"
-        class_weight_file_vert = "classifier_weights_hed_vert.h5"
+        class_weight_file = "classifier_weights_hed.h5"
     elif edge_type == "rgb_canny":
-        class_weight_file_square = "classifier_weights_rgb.h5"
-        class_weight_file_vert = "classifier_weights_rgb_vert.h5"
+        class_weight_file = "classifier_weights_rgb.h5"
     else:
-        class_weight_file_square = "classifier_weights.h5"
-        class_weight_file_vert = "classifier_weights_vert.h5"
+        class_weight_file = "classifier_weights.h5"
 
     if edge_type == "multi_canny":
-        weight_file_square = "bin_classifier_weights_multi.h5"
-        weight_file_vert = "bin_classifier_weights_multi_vert.h5"
+        weight_file = "bin_classifier_weights_multi.h5"
     elif edge_type == "rgb_canny":
-        weight_file_square = "bin_classifier_weights_rgb.h5"
-        weight_file_vert = "bin_classifier_weights_rgb_vert.h5"
+        weight_file = "bin_classifier_weights_rgb.h5"
     elif edge_type == "hed":
-        weight_file_square = "bin_classifier_weights_hed.h5"
-        weight_file_vert = "bin_classifier_weights_hed_vert.h5"
+        weight_file = "bin_classifier_weights_hed.h5"
     else:
-        weight_file_square = "bin_classifier_weights.h5"
-        weight_file_vert = "bin_classifier_weights_vert.h5"
+        weight_file = "bin_classifier_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -95,20 +86,8 @@ if __name__ == "__main__":
 
     print("Starting training...")
     print("Training square classifier...")
-    classifier = Classification(224, 224, class_weights=class_weight_file_square, weight_file=weight_file_square, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
+    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
     history = classifier.train_model(
-        train_labels_dir.strip(),
-        train_images_dir.strip(),
-        val_labels_dir.strip(),
-        val_images_dir.strip(),
-        epochs,
-        batch_size,
-        False
-    )
-
-    print("Training square classifier...")
-    classifierVert = ClassificationVertical(112, 448, class_weights=class_weight_file_vert, weight_file=weight_file_vert, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
-    historyVert = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
         val_labels_dir.strip(),
