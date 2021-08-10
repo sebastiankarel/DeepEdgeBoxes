@@ -92,10 +92,6 @@ class Classification:
         model.save_weights(self.weight_file, overwrite=True)
         return history
 
-    @staticmethod
-    def __mask_out_region(window, xmin, ymin, xmax, ymax):
-        return cv2.rectangle(window.copy(), (xmin, ymin), (xmax, ymax), (0, 0, 0), -1)
-
     def predict(self, image, threshold=0.2):
         orig_width = image.shape[1]
         orig_height = image.shape[0]
@@ -145,6 +141,8 @@ class Classification:
                 x_offset = x * (window_width * overlap)
                 for y in range(0, steps):
                     y_offset = y * (window_height * overlap)
+
+                    # Apply square window
                     xmin = int(x_offset)
                     xmax = int(x_offset + window_width)
                     ymin = int(y_offset)
@@ -164,4 +162,49 @@ class Classification:
                         true_ymax = true_ymin + int(window_height * resize_y)
                         window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
                         result.append(window_result)
+
+                    # Try to apply horizontal window
+                    xmin = int(x_offset - (window_width / 2))
+                    xmax = int(x_offset + window_width + (window_width / 2))
+                    ymin = int(y_offset)
+                    ymax = int(y_offset + window_height)
+                    if xmin >= 0 and xmax <= resized_image.shape[1]:
+                        window = resized_image[ymin:ymax, xmin:xmax]
+                        window = cv2.resize(window, (self.image_width, self.image_height))  # Make square to fit classifier
+                        if self.use_multichannel or self.use_rgb:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                        else:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                        window = window / 255.0
+                        prediction = model.predict(window, 1)[0]
+                        if prediction >= threshold:
+                            true_xmin = int((x_offset - (window_width / 2)) * resize_x)
+                            true_ymin = int(y_offset * resize_y)
+                            true_xmax = true_xmin + int((window_width + (window_width / 2)) * resize_x)
+                            true_ymax = true_ymin + int(window_height * resize_y)
+                            window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                            result.append(window_result)
+
+                    # Try to apply vertical window
+                    xmin = int(x_offset)
+                    xmax = int(x_offset + window_width)
+                    ymin = int(y_offset - (window_height / 2))
+                    ymax = int(y_offset + window_height + (window_height / 2))
+                    if ymin >= 0 and ymax <= resized_image.shape[0]:
+                        window = resized_image[ymin:ymax, xmin:xmax]
+                        window = cv2.resize(window, (self.image_width, self.image_height))   # Make square to fit classifier
+                        if self.use_multichannel or self.use_rgb:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                        else:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                        window = window / 255.0
+                        prediction = model.predict(window, 1)[0]
+                        if prediction >= threshold:
+                            true_xmin = int(x_offset * resize_x)
+                            true_ymin = int((y_offset - (window_height / 2)) * resize_y)
+                            true_xmax = true_xmin + int(window_width * resize_x)
+                            true_ymax = true_ymin + int((window_height + (window_height / 2)) * resize_y)
+                            window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                            result.append(window_result)
+
         return result

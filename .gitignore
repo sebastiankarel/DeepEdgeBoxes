@@ -8,7 +8,7 @@
 !pvoc07_util.py
 !pvoc07_paths.txt
 !DataGenerationClassificationHED.py
-!Train.py
+!TrainClassification.py
 !train_configs.txt
 !BinaryClassification.py
 !DataGenBinaryClassification.py
@@ -21,12 +21,3 @@
 !TrainBBoxReg.py
 !DataGenBBoxReg.py
 !DataGenBBoxRegHED.py
-!BinaryClassificationVertical.py
-!DataGenBinaryClassificationHEDVertical.py
-!DataGenBinaryClassificationVertical.py
-!ClassificationVertical.py
-!DataGenerationClassificationHEDVertical.py
-!DataGenerationClassificationVertical.py
-!ClassificationHorizontal.py
-!DataGenerationClassificationHorizontal.py
-!DataGenerationClassificationHEDHorizontal.py
