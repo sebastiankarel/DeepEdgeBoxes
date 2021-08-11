@@ -33,7 +33,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         else:
             self.channels = 1
         self.indexes = np.arange(len(self.labels))
-        self.label_dim = 2
+        self.label_dim = 4
         self.on_epoch_end()
 
     def __getitem__(self, index):
@@ -100,31 +100,32 @@ class DataGenerator(tf.keras.utils.Sequence):
             if not self.multi_channel and not self.rgb:
                 cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
 
-            # Place image region centred on square black background
-            if cutout.shape[1] > cutout.shape[0]:
-                window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
-                margin = int((window.shape[0] - cutout.shape[0]) / 2)
-                window[margin:(margin + cutout.shape[0]), :, :] = cutout
-            else:
-                window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
-                margin = int((window.shape[1] - cutout.shape[1]) / 2)
-                window[:, margin:(margin + cutout.shape[1]), :] = cutout
-
             # Place object randomly on larger black background
-            x_offset = np.random.random()
-            y_offset = np.random.random()
-            new_window = np.zeros((int(window.shape[0] * 1.5), int(window.shape[1] * 1.5), self.channels))
-            x_margin = int(float(window.shape[1]) * x_offset * 0.5)
-            y_margin = int(float(window.shape[0]) * y_offset * 0.5)
-            new_window[y_margin:(y_margin + window.shape[0]), x_margin:(x_margin + window.shape[1]), :] = window
+            if cutout.shape[1] > cutout.shape[0]:
+                window_size = int(float(cutout.shape[1]) * float(np.random.randint(1, 4)))
+            else:
+                window_size = int(float(cutout.shape[0]) * float(np.random.randint(1, 4)))
+            x_offset = 0
+            if window_size - cutout.shape[1] > 0:
+                x_offset = np.random.randint(0, window_size - cutout.shape[1])
+            y_offset = 0
+            if window_size - cutout.shape[0] > 1:
+                y_offset = np.random.randint(0, window_size - cutout.shape[0])
+            window = np.zeros((window_size, window_size, self.channels))
+            window[y_offset:(y_offset + cutout.shape[0]), x_offset:(x_offset + cutout.shape[1])] = cutout
 
-            new_window = cv2.resize(new_window, (self.image_width, self.image_height))
+            xmin = float(x_offset + margin) / float(window_size)
+            ymin = float(y_offset + margin) / float(window_size)
+            xmax = float(x_offset + (target_box[2] - target_box[0]) - margin) / float(window_size)
+            ymax = float(y_offset + (target_box[3] - target_box[1]) - margin) / float(window_size)
+
+            new_window = cv2.resize(window, (self.image_width, self.image_height))
             new_window = np.array(new_window, dtype=np.float)
             if not self.multi_channel and not self.rgb:
                 new_window = np.reshape(new_window, (new_window.shape[0], new_window.shape[1], 1))
             new_window /= 255.0
 
             x[i] = new_window
-            y[i] = (x_offset, y_offset)
+            y[i] = (xmin, ymin, xmax, ymax)
 
         return x, y

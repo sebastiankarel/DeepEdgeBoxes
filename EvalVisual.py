@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as et
 from EdgeDetection import HED
-from BBoxReg import OffsetPrediction
+from BBoxReg import BBoxReg
 
 
 def init_tf_gpu():

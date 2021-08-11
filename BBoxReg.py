@@ -7,7 +7,7 @@ import numpy as np
 import EdgeDetection as ed
 
 
-class OffsetPrediction:
+class BBoxReg:
 
     def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, use_rgb, hed=None):
         self.image_width = image_width
@@ -45,9 +45,9 @@ class OffsetPrediction:
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2", trainable=False))
         model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3", trainable=False))
         model.add(keras.layers.Flatten(name="flatten"))
-        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_shape_1"))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_shape_2"))
-        model.add(keras.layers.Dense(units=2, activation='sigmoid', name="out_shape"))
+        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_reg_1"))
+        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_reg_2"))
+        model.add(keras.layers.Dense(units=4, activation='sigmoid', name="out_reg"))
         model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.mean_squared_error, metrics=[keras.metrics.Accuracy()])
         if load_weights:
             if os.path.isfile(self.weight_file):
@@ -87,11 +87,11 @@ class OffsetPrediction:
         model.save_weights(self.weight_file, overwrite=True)
         return history
 
-    def predict(self, original_image, predictions):
+    def predict(self, original_image, section_coordinates):
         model = self.__get_model(True)
         result = []
-        for prediction in predictions:
-            image = original_image[prediction[1]:prediction[3], prediction[0]:prediction[2], :]
+        for coordinate in section_coordinates:
+            image = original_image[coordinate[1]:coordinate[3], coordinate[0]:coordinate[2], :]
             orig_width = image.shape[1]
             orig_height = image.shape[0]
 
@@ -111,6 +111,7 @@ class OffsetPrediction:
                 new_edge_image = np.zeros((edge_image.shape[0], edge_image.shape[1] + x_padding, edge_image.shape[2]))
                 new_edge_image[:, x_padding_start:x_end, :] = edge_image[:, :, :]
                 edge_image = new_edge_image
+                orig_width += x_padding
             elif edge_image.shape[1] > edge_image.shape[0]:
                 y_padding = edge_image.shape[1] - edge_image.shape[0]
                 y_padding_top = round(y_padding / 2.0)
@@ -118,6 +119,7 @@ class OffsetPrediction:
                 new_edge_image = np.zeros((edge_image.shape[0] + y_padding, edge_image.shape[1], edge_image.shape[2]))
                 new_edge_image[y_padding_top:y_end, :, :] = edge_image[:, :, :]
                 edge_image = new_edge_image
+                orig_height += y_padding
 
             resized_image = np.array(cv2.resize(edge_image, (self.image_width, self.image_height)), dtype=np.float)
             if not self.use_multichannel and not self.use_rgb:
@@ -125,5 +127,11 @@ class OffsetPrediction:
             else:
                 resized_image = np.reshape(resized_image, (1, resized_image.shape[0], resized_image.shape[1], resized_image.shape[2]))
 
-            result.append(model.predict(resized_image, 1)[0])
+            pred = model.predict(resized_image, 1)[0]
+            xmin = int(pred[0] * float(orig_width))
+            ymin = int(pred[1] * float(orig_height))
+            xmax = int(pred[2] * float(orig_width))
+            ymax = int(pred[3] * float(orig_height))
+
+            result.append((xmin, ymin, xmax, ymax))
         return result

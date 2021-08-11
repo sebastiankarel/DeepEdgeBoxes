@@ -5,7 +5,7 @@ import os
 import cv2
 import numpy as np
 import xml.etree.ElementTree as et
-from BBoxReg import OffsetPrediction
+from BBoxReg import BBoxReg
 from EdgeDetection import HED
 import random
 
@@ -65,6 +65,7 @@ if __name__ == "__main__":
     init_tf_gpu()
 
     edge_type = "single_canny"
+    use_bbox_reg = False
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
@@ -73,6 +74,10 @@ if __name__ == "__main__":
                     edge_type = split[1]
                 else:
                     print("Unknown edge type {}. Using default single_canny".format(split[1]))
+            elif split[0] == "use_bbox_reg":
+                if split[1] == "true":
+                    use_bbox_reg = True
+
             else:
                 print("Unknown argument {}. Ignoring it.".format(split[0]))
 
@@ -86,15 +91,19 @@ if __name__ == "__main__":
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
         class_weight_file = "classifier_weights_multi.h5"
+        reg_weight_file = "reg_weights_multi.h5"
     elif edge_type == "rgb_canny":
         weight_file = "bin_classifier_weights_rgb.h5"
         class_weight_file = "classifier_weights_rgb.h5"
+        reg_weight_file = "reg_weights_rgb.h5"
     elif edge_type == "hed":
         weight_file = "bin_classifier_weights_hed.h5"
         class_weight_file = "classifier_weights_hed.h5"
+        reg_weight_file = "reg_weights_hed.h5"
     else:
         weight_file = "bin_classifier_weights.h5"
         class_weight_file = "classifier_weights.h5"
+        reg_weight_file = "reg_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -108,8 +117,10 @@ if __name__ == "__main__":
             elif split[0] == "test_labels_dir":
                 test_labels_dir = split[1]
 
+
     hed = HED()
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
+    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+    reg = BBoxReg(224, 224, class_weights=class_weight_file, weight_file=reg_weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
@@ -127,6 +138,8 @@ if __name__ == "__main__":
                 print("Evaluating image {} of {} (sample {} of {})".format(i, len(sample), k, 5))
                 ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
                 predictions = classifier.predict(image)
+                if use_bbox_reg:
+                    predictions = reg.predict(image, predictions)
                 num_proposals += len(predictions)
                 num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions)
                 true_positives += num_predicted

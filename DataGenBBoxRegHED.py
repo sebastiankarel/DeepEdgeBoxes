@@ -27,7 +27,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.image_height = image_height
         self.channels = 1
         self.indexes = np.arange(len(self.labels))
-        self.label_dim = 2
+        self.label_dim = 4
         self.on_epoch_end()
 
     def __getitem__(self, index):
@@ -49,6 +49,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         for i, f in enumerate(labels_temp):
             image = cv2.imread(os.path.join(self.images_dir, f + ".jpg"))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = np.reshape(image, (image.shape[0], image.shape[1], 1))
             orig_width = int(image.shape[1])
             orig_height = int(image.shape[0])
 
@@ -87,27 +88,24 @@ class DataGenerator(tf.keras.utils.Sequence):
                 window_xmax = min(target_box[2] + margin, orig_width)
                 cutout = image[window_ymin:window_ymax, window_xmin:window_xmax]
 
-            local_xmin = target_box[0] - window_xmin
-            local_ymin = target_box[1] - window_ymin
-            local_xmax = target_box[2] - window_xmax
-            local_ymax = target_box[3] - window_ymax
-
-            # Place image region centred on square black background
+            # Place object randomly on larger black background
             if cutout.shape[1] > cutout.shape[0]:
-                window = np.zeros((cutout.shape[1], cutout.shape[1]))
-                margin = int((window.shape[0] - cutout.shape[0]) / 2)
-                window[margin:(margin + cutout.shape[0]), :] = cutout
+                window_size = int(float(cutout.shape[1]) * float(np.random.randint(1, 4)))
             else:
-                window = np.zeros((cutout.shape[0], cutout.shape[0]))
-                margin = int((window.shape[1] - cutout.shape[1]) / 2)
-                window[:, margin:(margin + cutout.shape[1])] = cutout
+                window_size = int(float(cutout.shape[0]) * float(np.random.randint(1, 4)))
+            x_offset = 0
+            if window_size - cutout.shape[1] > 0:
+                x_offset = np.random.randint(0, window_size - cutout.shape[1])
+            y_offset = 0
+            if window_size - cutout.shape[0] > 1:
+                y_offset = np.random.randint(0, window_size - cutout.shape[0])
+            window = np.zeros((window_size, window_size, self.channels))
+            window[y_offset:(y_offset + cutout.shape[0]), x_offset:(x_offset + cutout.shape[1])] = cutout
 
-            window_x_center = float(window.shape[1]) / 2.0
-            window_y_center = float(window.shape[0]) / 2.0
-            obj_x_center = (float(local_xmax - local_xmin) / 2.0) + float(local_xmin)
-            obj_y_center = (float(local_ymax - local_ymin) / 2.0) + float(local_ymin)
-            obj_x_offset = (window_x_center - obj_x_center) / float(window.shape[1])
-            obj_y_offset = (window_y_center - obj_y_center) / float(window.shape[0])
+            xmin = float(x_offset + margin) / float(window_size)
+            ymin = float(y_offset + margin) / float(window_size)
+            xmax = float(x_offset + (target_box[2] - target_box[0]) - margin) / float(window_size)
+            ymax = float(y_offset + (target_box[3] - target_box[1]) - margin) / float(window_size)
 
             window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)
@@ -115,6 +113,6 @@ class DataGenerator(tf.keras.utils.Sequence):
             window = np.reshape(window, (window.shape[0], window.shape[1], 1))
 
             x[i] = window
-            y[i] = (obj_x_offset, obj_y_offset)
+            y[i] = (xmin, ymin, xmax, ymax)
 
         return x, y
