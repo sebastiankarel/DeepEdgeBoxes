@@ -100,7 +100,7 @@ class Classification:
             edge_image = self.hed.get_edge_image(image, orig_width, orig_height, normalized=False)
             edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
         else:
-            edge_image = ed.auto_canny(image, self.use_multichannel)
+            edge_image = ed.auto_canny(image, self.use_multichannel, self.use_rgb)
             if not self.use_multichannel and not self.use_rgb:
                 edge_image = np.reshape(edge_image, (edge_image.shape[0], edge_image.shape[1], 1))
 
