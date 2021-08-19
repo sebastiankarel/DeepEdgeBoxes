@@ -1,6 +1,7 @@
 import tensorflow as tf
 from Classification import Classification
 import sys
+import matplotlib.pyplot as plt
 
 
 def init_tf_gpu():
@@ -13,9 +14,9 @@ def init_tf_gpu():
 if __name__ == "__main__":
     init_tf_gpu()
 
-    edge_type = "single_canny"
+    edge_type = "multi_canny"
     batch_size = 18
-    epochs = 50
+    epochs = 30
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
@@ -76,7 +77,7 @@ if __name__ == "__main__":
                     val_labels_dir = split[1]
 
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
-    print("Starting training...")
+    print("Starting training for {}...".format(edge_type))
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
@@ -86,3 +87,28 @@ if __name__ == "__main__":
         batch_size,
         False
     )
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+
+    ax1.set_title("Classifier Loss")
+    ax1.plot(history.history['loss'])
+    ax1.plot(history.history['val_loss'])
+    ax1.set_ylabel("Loss")
+    ax1.set_xlabel("Epoch")
+    ax1.legend(["Train", "Validation"], loc="upper left")
+
+    ax2.set_title("Classifier Precision")
+    ax2.plot(history.history['precision'])
+    ax2.plot(history.history['val_precision'])
+    ax2.set_ylabel("Precision")
+    ax2.set_xlabel("Epoch")
+    ax2.legend(["Train", "Validation"], loc="upper left")
+
+    ax3.set_title("Classifier Recall")
+    ax3.plot(history.history['recall'])
+    ax3.plot(history.history['val_recall'])
+    ax3.set_ylabel("Recall")
+    ax3.set_xlabel("Epoch")
+    ax3.legend(["Train", "Validation"], loc="upper left")
+
+    fig.tight_layout()
+    fig.savefig("training_output/{}.png".format(edge_type))
