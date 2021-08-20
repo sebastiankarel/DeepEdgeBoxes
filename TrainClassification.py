@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     edge_type = "multi_canny"
     batch_size = 18
-    epochs = 30
+    epochs = 50
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
