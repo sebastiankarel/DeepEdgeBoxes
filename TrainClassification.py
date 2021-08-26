@@ -14,7 +14,7 @@ def init_tf_gpu():
 if __name__ == "__main__":
     init_tf_gpu()
 
-    edge_type = "multi_canny"
+    edge_type = "rgb_canny"
     batch_size = 18
     epochs = 50
     for arg in sys.argv:

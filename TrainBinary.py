@@ -14,9 +14,9 @@ def init_tf_gpu():
 if __name__ == "__main__":
     init_tf_gpu()
 
-    edge_type = "multi_canny"
+    edge_type = "hed"
     batch_size = 18
-    epochs = 10
+    epochs = 50
     for arg in sys.argv:
         split = arg.split("=")
         if len(split) == 2:
@@ -86,7 +86,7 @@ if __name__ == "__main__":
                     val_labels_dir = split[1]
 
     print("Starting training for {}...".format(edge_type))
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb)
+    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=None, from_scratch=True)
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
@@ -121,4 +121,4 @@ if __name__ == "__main__":
     ax3.legend(["Train", "Validation"], loc="upper left")
 
     fig.tight_layout()
-    fig.savefig("training_output/{}_bin.png".format(edge_type))
+    fig.savefig("training_output/{}_bin_nopretrain.png".format(edge_type))
