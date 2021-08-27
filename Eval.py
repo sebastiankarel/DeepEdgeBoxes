@@ -6,6 +6,7 @@ import numpy as np
 import xml.etree.ElementTree as et
 from EdgeDetection import HED
 import random
+import time
 
 
 def init_tf_gpu():
@@ -25,12 +26,18 @@ def compute_iou(ground_truth, prediction):
     return intersection / union
 
 
-def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5, limit=None):
-    if limit is not None:
-        predictions = sorted(predictions, key=lambda x: x[4])
+def get_best_n(predictions, limits):
+    result = []
+    predictions = sorted(predictions, key=lambda x: x[4])
+    for limit in limits:
         if len(predictions) > limit:
-            predictions = predictions[:limit]
+            result.append(predictions[:limit])
+        else:
+            result.append(predictions)
+    return result
 
+
+def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5):
     best_predictions = []
     for ground_truth in ground_truths:
         best_prediction = (None, 0.0)
@@ -87,8 +94,9 @@ def run_eval(sample, edge_type="single_canny"):
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
 
     print("Starting evaluation for {}".format(edge_type))
+    start = time.process_time()
     ious = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
-    limits = [None, 1000, 100, 10]
+    limits = [1000, 100, 10]
     true_positives = np.zeros((len(ious), len(limits)))
     false_negatives = np.zeros((len(ious), len(limits)))
     num_proposals = 0
@@ -99,9 +107,10 @@ def run_eval(sample, edge_type="single_canny"):
             ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
             predictions = classifier.predict(image)
             num_proposals += len(predictions)
-            for iou_idx, iou in enumerate(ious):
-                for lim_idx, lim in enumerate(limits):
-                    num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions, iou_threshold=iou, limit=lim)
+            best_n_predictions = get_best_n(predictions, limits)
+            for lim_idx, limited_predictions in enumerate(best_n_predictions):
+                for iou_idx, iou in enumerate(ious):
+                    num_predicted, num_missed = get_num_matching_predictions(ground_truths, limited_predictions, iou_threshold=iou)
                     true_positives[iou_idx][lim_idx] += num_predicted
                     false_negatives[iou_idx][lim_idx] += num_missed
 
@@ -115,6 +124,7 @@ def run_eval(sample, edge_type="single_canny"):
             else:
                 recall = 0.0
             print("Recall for limit {}: {}".format(lim, recall))
+    print("Elapsed time: {}".format(print(time.process_time() - start)))
     print("------------------------------------------------------------------------")
 
 
