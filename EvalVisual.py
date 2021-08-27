@@ -6,7 +6,6 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as et
 from EdgeDetection import HED
-from BBoxReg import BBoxReg
 
 
 def init_tf_gpu():
@@ -102,7 +101,7 @@ if __name__ == "__main__":
                 test_labels_dir = split[1]
 
     hed = HED()
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+    classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()

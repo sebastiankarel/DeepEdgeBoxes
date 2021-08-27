@@ -94,7 +94,7 @@ def run_eval(sample, edge_type="single_canny"):
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
 
     start = time.process_time()
-    ious = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
+    ious = [0.7, 0.6, 0.5, 0.4, 0.3]
     limits = [1000, 100, 10]
     true_positives = np.zeros((len(ious), len(limits)))
     false_negatives = np.zeros((len(ious), len(limits)))

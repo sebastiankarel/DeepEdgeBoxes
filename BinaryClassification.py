@@ -149,15 +149,14 @@ class Classification:
                     else:
                         window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
                     window = window / 255.0
-                    if np.count_nonzero(window) > 3:
-                        prediction = model.predict(window, 1)[0]
-                        if prediction >= threshold:
-                            true_xmin = int(x_offset * resize_x)
-                            true_ymin = int(y_offset * resize_y)
-                            true_xmax = true_xmin + int(window_width * resize_x)
-                            true_ymax = true_ymin + int(window_height * resize_y)
-                            window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
-                            result.append(window_result)
+                    prediction = model.predict(window, 1)[0]
+                    if prediction >= threshold:
+                        true_xmin = int(x_offset * resize_x)
+                        true_ymin = int(y_offset * resize_y)
+                        true_xmax = true_xmin + int(window_width * resize_x)
+                        true_ymax = true_ymin + int(window_height * resize_y)
+                        window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                        result.append(window_result)
 
                     # Try to apply horizontal window
                     xmin = int(x_offset - (window_width / 2))
@@ -166,21 +165,20 @@ class Classification:
                     ymax = int(y_offset + window_height)
                     if xmin >= 0 and xmax <= resized_image.shape[1]:
                         window = resized_image[ymin:ymax, xmin:xmax]
-                        if np.count_nonzero(window) > 3:
-                            window = cv2.resize(window, (self.image_width, self.image_height))  # Make square to fit classifier
-                            if self.use_multichannel or self.use_rgb:
-                                window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
-                            else:
-                                window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
-                            window = window / 255.0
-                            prediction = model.predict(window, 1)[0]
-                            if prediction >= threshold:
-                                true_xmin = int((x_offset - (window_width / 2)) * resize_x)
-                                true_ymin = int(y_offset * resize_y)
-                                true_xmax = true_xmin + int((window_width + (window_width / 2)) * resize_x)
-                                true_ymax = true_ymin + int(window_height * resize_y)
-                                window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
-                                result.append(window_result)
+                        window = cv2.resize(window, (self.image_width, self.image_height))  # Make square to fit classifier
+                        if self.use_multichannel or self.use_rgb:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                        else:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                        window = window / 255.0
+                        prediction = model.predict(window, 1)[0]
+                        if prediction >= threshold:
+                            true_xmin = int((x_offset - (window_width / 2)) * resize_x)
+                            true_ymin = int(y_offset * resize_y)
+                            true_xmax = true_xmin + int((window_width + (window_width / 2)) * resize_x)
+                            true_ymax = true_ymin + int(window_height * resize_y)
+                            window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                            result.append(window_result)
 
                     # Try to apply vertical window
                     xmin = int(x_offset)
@@ -189,20 +187,19 @@ class Classification:
                     ymax = int(y_offset + window_height + (window_height / 2))
                     if ymin >= 0 and ymax <= resized_image.shape[0]:
                         window = resized_image[ymin:ymax, xmin:xmax]
-                        if np.count_nonzero(window) > 3:
-                            window = cv2.resize(window, (self.image_width, self.image_height))   # Make square to fit classifier
-                            if self.use_multichannel or self.use_rgb:
-                                window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
-                            else:
-                                window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
-                            window = window / 255.0
-                            prediction = model.predict(window, 1)[0]
-                            if prediction >= threshold:
-                                true_xmin = int(x_offset * resize_x)
-                                true_ymin = int((y_offset - (window_height / 2)) * resize_y)
-                                true_xmax = true_xmin + int(window_width * resize_x)
-                                true_ymax = true_ymin + int((window_height + (window_height / 2)) * resize_y)
-                                window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
-                                result.append(window_result)
+                        window = cv2.resize(window, (self.image_width, self.image_height))   # Make square to fit classifier
+                        if self.use_multichannel or self.use_rgb:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                        else:
+                            window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                        window = window / 255.0
+                        prediction = model.predict(window, 1)[0]
+                        if prediction >= threshold:
+                            true_xmin = int(x_offset * resize_x)
+                            true_ymin = int((y_offset - (window_height / 2)) * resize_y)
+                            true_xmax = true_xmin + int(window_width * resize_x)
+                            true_ymax = true_ymin + int((window_height + (window_height / 2)) * resize_y)
+                            window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                            result.append(window_result)
 
         return result
