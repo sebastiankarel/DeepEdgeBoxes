@@ -26,7 +26,7 @@ def compute_iou(ground_truth, prediction):
     return intersection / union
 
 
-def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5):
+def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5, limit=None):
     best_predictions = []
     for ground_truth in ground_truths:
         best_prediction = (None, 0.0)
@@ -35,11 +35,17 @@ def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5):
             if iou >= iou_threshold:
                 if iou > best_prediction[1]:
                     best_prediction = (prediction, iou)
-        best_predictions.append(best_prediction[0])
+        best_predictions.append(best_prediction)
+
+    if limit is not None:
+        best_predictions = sorted(best_predictions, key=lambda x: x[1])
+        if len(best_predictions) > limit:
+            best_predictions = best_predictions[:limit]
+
     num_predicted = 0
     num_missed = 0
     for best in best_predictions:
-        if best is None:
+        if best[0] is None:
             num_missed += 1
         else:
             num_predicted += 1
@@ -60,29 +66,7 @@ def read_label_file(file_name):
     return np.array(bboxes)
 
 
-if __name__ == "__main__":
-    init_tf_gpu()
-
-    iou_thresh = 0.5
-    edge_type = "single_canny"
-    for arg in sys.argv:
-        split = arg.split("=")
-        if len(split) == 2:
-            if split[0] == "edge_type":
-                if split[1] == "single_canny" or split[1] == "multi_canny" or split[1] == "hed":
-                    edge_type = split[1]
-                else:
-                    print("Unknown edge type {}. Using default single_canny".format(split[1]))
-            else:
-                print("Unknown argument {}. Ignoring it.".format(split[0]))
-
-    print("Read eval_configs.txt")
-    file = open("eval_configs.txt", "r")
-    lines = file.readlines()
-
-    test_images_dir = ""
-    test_labels_dir = ""
-
+def run_eval(sample, edge_type="single_canny"):
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
     elif edge_type == "rgb_canny":
@@ -96,6 +80,57 @@ if __name__ == "__main__":
     use_multi = edge_type == "multi_canny"
     use_rgb = edge_type == "rgb_canny"
 
+    if edge_type == "hed":
+        hed = HED()
+    else:
+        hed = None
+
+    classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+
+    print("Starting evaluation for {}".format(edge_type))
+    ious = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
+    limits = [None, 1000, 100, 10]
+    true_positives = np.zeros((len(ious), len(limits)))
+    false_negatives = np.zeros((len(ious), len(limits)))
+    num_proposals = 0
+    for i, label_file_name in enumerate(sample):
+        image_file_name = label_file_name.split(".")[0] + ".jpg"
+        image = cv2.imread(os.path.join(test_images_dir, image_file_name))
+        if image is not None:
+            ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
+            predictions = classifier.predict(image)
+            num_proposals += len(predictions)
+            for iou_idx, iou in enumerate(ious):
+                for lim_idx, lim in enumerate(limits):
+                    num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions, iou_threshold=iou, limit=lim)
+                    true_positives[iou_idx][lim_idx] += num_predicted
+                    false_negatives[iou_idx][lim_idx] += num_missed
+
+    print("Average number of proposals: {}".format(float(num_proposals) / float(len(sample))))
+    for iou_idx, iou in enumerate(ious):
+        print("IOU: {}".format(iou))
+        for lim_idx, lim in enumerate(limits):
+            print("LIMIT: {}".format(lim))
+            if true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx] > 0:
+                recall = float(true_positives[iou_idx][lim_idx]) / float(true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx])
+            else:
+                recall = 0.0
+            print("Recall: {}".format(recall))
+
+
+
+if __name__ == "__main__":
+    init_tf_gpu()
+
+    sample_size = 70
+
+    print("Read eval_configs.txt")
+    file = open("eval_configs.txt", "r")
+    lines = file.readlines()
+
+    test_images_dir = ""
+    test_labels_dir = ""
+
     for line in lines:
         split = line.split("=")
         if len(split) == 2:
@@ -103,35 +138,14 @@ if __name__ == "__main__":
                 test_images_dir = split[1]
             elif split[0] == "test_labels_dir":
                 test_labels_dir = split[1]
-
-    hed = HED()
-    classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
-    print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
     labels = os.listdir(test_labels_dir)
+    sample = random.sample(labels, sample_size)
 
-    sample = random.sample(labels, 100)
-    ious = np.arange(0.8, 0.3, -0.1)
-    print(ious)
-    for k in ious:
-        print("Evaluating with IOU threshold: {}".format(k))
-        true_positives = 0
-        false_negatives = 0
-        num_proposals = 0
-        for i, label_file_name in enumerate(sample):
-            image_file_name = label_file_name.split(".")[0] + ".jpg"
-            image = cv2.imread(os.path.join(test_images_dir, image_file_name))
-            if image is not None:
-                ground_truths = read_label_file(os.path.join(test_labels_dir, label_file_name))
-                predictions = classifier.predict(image)
-                num_proposals += len(predictions)
-                num_predicted, num_missed = get_num_matching_predictions(ground_truths, predictions, iou_threshold=k)
-                true_positives += num_predicted
-                false_negatives += num_missed
-            if true_positives + false_negatives > 0:
-                recall = float(true_positives) / float(true_positives + false_negatives)
+    run_eval(sample, "single_canny")
+    run_eval(sample, "multi_canny")
+    run_eval(sample, "rgb_canny")
+    run_eval(sample, "hed")
 
-        recall = float(true_positives) / float(true_positives + false_negatives)
-        print("Recall: {}".format(recall))
-        print("Average number of proposals: {}".format(num_proposals / len(sample)))
+    print("Done.")
