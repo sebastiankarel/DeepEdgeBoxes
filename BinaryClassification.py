@@ -9,15 +9,13 @@ import EdgeDetection as ed
 
 class Classification:
 
-    def __init__(self, image_width, image_height, class_weights, weight_file, use_hed, use_multichannel, use_rgb, hed=None, from_scratch=True):
+    def __init__(self, image_width, image_height, weight_file, use_hed, use_multichannel, use_rgb, hed=None):
         self.image_width = image_width
         self.image_height = image_height
         self.weight_file = weight_file
-        self.class_weights = class_weights
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
         self.use_rgb = use_rgb
-        self.from_scratch = from_scratch
         if use_hed:
             self.hed = hed
         else:
@@ -33,22 +31,22 @@ class Classification:
                 channels = 1
         model = keras.models.Sequential()
         model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, channels), trainable=False))
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2", trainable=self.from_scratch))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
         model.add(keras.layers.MaxPool2D(name="max_pool_1"))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2", trainable=self.from_scratch))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1"))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2"))
         model.add(keras.layers.MaxPool2D(name="max_pool_2"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3", trainable=self.from_scratch))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1"))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2"))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_3"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3", trainable=self.from_scratch))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_4"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2", trainable=self.from_scratch))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3", trainable=self.from_scratch))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
         model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_bin_class_1"))
@@ -62,11 +60,6 @@ class Classification:
 
     def train_model(self, train_labels_dir, train_images_dir, val_labels_dir, val_images_dir, epochs, batch_size, load_weights):
         model = self.__get_model(load_weights)
-        if not self.from_scratch:
-            if os.path.isfile(self.class_weights):
-                model.load_weights(self.class_weights, by_name=True)
-            else:
-                raise Exception("Classifier weights not found")
         if self.use_hed:
             training_generator = DataGenHed(
                 train_images_dir,

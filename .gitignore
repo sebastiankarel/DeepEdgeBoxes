@@ -13,7 +13,7 @@
 !BinaryClassification.py
 !DataGenBinaryClassification.py
 !DataGenBinaryClassificationHED.py
-!TrainBinary.py
+!Train.py
 !Eval.py
 !EvalVisual.py
 !eval_configs.txt
