@@ -1,6 +1,5 @@
 import tensorflow as tf
 from BinaryClassification import Classification
-import sys
 import os
 import cv2
 import numpy as np
@@ -27,6 +26,11 @@ def compute_iou(ground_truth, prediction):
 
 
 def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5, limit=None):
+    if limit is not None:
+        predictions = sorted(predictions, key=lambda x: x[4])
+        if len(predictions) > limit:
+            predictions = predictions[:limit]
+
     best_predictions = []
     for ground_truth in ground_truths:
         best_prediction = (None, 0.0)
@@ -35,17 +39,12 @@ def get_num_matching_predictions(ground_truths, predictions, iou_threshold=0.5, 
             if iou >= iou_threshold:
                 if iou > best_prediction[1]:
                     best_prediction = (prediction, iou)
-        best_predictions.append(best_prediction)
-
-    if limit is not None:
-        best_predictions = sorted(best_predictions, key=lambda x: x[1])
-        if len(best_predictions) > limit:
-            best_predictions = best_predictions[:limit]
+        best_predictions.append(best_prediction[0])
 
     num_predicted = 0
     num_missed = 0
     for best in best_predictions:
-        if best[0] is None:
+        if best is None:
             num_missed += 1
         else:
             num_predicted += 1
@@ -106,23 +105,23 @@ def run_eval(sample, edge_type="single_canny"):
                     true_positives[iou_idx][lim_idx] += num_predicted
                     false_negatives[iou_idx][lim_idx] += num_missed
 
+    print("-------------------------{}--------------------------------".format(edge_type))
     print("Average number of proposals: {}".format(float(num_proposals) / float(len(sample))))
     for iou_idx, iou in enumerate(ious):
-        print("IOU: {}".format(iou))
+        print("-----------------------IOU: {}--------------------------".format(iou))
         for lim_idx, lim in enumerate(limits):
-            print("LIMIT: {}".format(lim))
             if true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx] > 0:
                 recall = float(true_positives[iou_idx][lim_idx]) / float(true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx])
             else:
                 recall = 0.0
-            print("Recall: {}".format(recall))
-
+            print("Recall for limit {}: {}".format(lim, recall))
+    print("------------------------------------------------------------------------")
 
 
 if __name__ == "__main__":
     init_tf_gpu()
 
-    sample_size = 70
+    sample_size = 100
 
     print("Read eval_configs.txt")
     file = open("eval_configs.txt", "r")
