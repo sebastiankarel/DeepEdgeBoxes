@@ -93,7 +93,6 @@ def run_eval(sample, edge_type="single_canny"):
 
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
 
-    print("Starting evaluation for {}".format(edge_type))
     start = time.process_time()
     ious = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
     limits = [1000, 100, 10]
@@ -151,6 +150,8 @@ if __name__ == "__main__":
     test_labels_dir = test_labels_dir.strip()
     labels = os.listdir(test_labels_dir)
     sample = random.sample(labels, sample_size)
+
+    print("Starting Evaluation...")
 
     run_eval(sample, "single_canny")
     run_eval(sample, "multi_canny")
