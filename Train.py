@@ -11,27 +11,7 @@ def init_tf_gpu():
     tf.compat.v1.keras.backend.set_session(sess)
 
 
-if __name__ == "__main__":
-    init_tf_gpu()
-
-    edge_type = "hed"
-    batch_size = 18
-    epochs = 50
-    for arg in sys.argv:
-        split = arg.split("=")
-        if len(split) == 2:
-            if split[0] == "edge_type":
-                if split[1] == "single_canny" or split[1] == "multi_canny" or split[1] == "hed" or split[1] == "rgb_canny":
-                    edge_type = split[1]
-                else:
-                    print("Unknown edge type {}. Using default single_canny".format(split[1]))
-            elif split[0] == "batch_size":
-                batch_size = int(split[1])
-            elif split[0] == "epochs":
-                epochs = int(split[1])
-            else:
-                print("Unknown argument {}. Ignoring it.".format(split[0]))
-
+def run_training(edge_type, batch_size, max_epochs=50):
     print("Read training configs.txt")
     file = open("train_configs.txt", "r")
     lines = file.readlines()
@@ -40,15 +20,6 @@ if __name__ == "__main__":
     train_labels_dir = ""
     val_images_dir = ""
     val_labels_dir = ""
-
-    if edge_type == "multi_canny":
-        class_weight_file = "classifier_weights_multi.h5"
-    elif edge_type == "hed":
-        class_weight_file = "classifier_weights_hed.h5"
-    elif edge_type == "rgb_canny":
-        class_weight_file = "classifier_weights_rgb.h5"
-    else:
-        class_weight_file = "classifier_weights.h5"
 
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
@@ -86,13 +57,13 @@ if __name__ == "__main__":
                     val_labels_dir = split[1]
 
     print("Starting training for {}...".format(edge_type))
-    classifier = Classification(224, 224, class_weights=class_weight_file, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=None, from_scratch=True)
+    classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=None)
     history = classifier.train_model(
         train_labels_dir.strip(),
         train_images_dir.strip(),
         val_labels_dir.strip(),
         val_images_dir.strip(),
-        epochs,
+        max_epochs,
         batch_size,
         False
     )
@@ -122,3 +93,24 @@ if __name__ == "__main__":
 
     fig.tight_layout()
     fig.savefig("training_output/{}_bin_nopretrain.png".format(edge_type))
+
+
+if __name__ == "__main__":
+    init_tf_gpu()
+
+    for arg in sys.argv:
+        split = arg.split("=")
+        if len(split) == 2:
+            if split[0] == "batch_size":
+                batch_size = int(split[1])
+            elif split[0] == "epochs":
+                epochs = int(split[1])
+            else:
+                print("Unknown argument {}. Ignoring it.".format(split[0]))
+
+    run_training("single_canny", batch_size=18)
+    run_training("multi_canny", batch_size=18)
+    run_training("rgb_canny", batch_size=18)
+    run_training("hed", batch_size=18)
+
+    print("Done.")
