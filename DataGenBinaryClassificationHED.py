@@ -142,7 +142,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                     window[margin_top:(margin_top + cutout.shape[0]), :, :] = cutout
                 else:
                     window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
-                    horizontal_margin = int((window.shape[1] - cutout.shape[1]) / 2)
+                    horizontal_margin = int(window.shape[1] - cutout.shape[1])
                     margin_start = np.random.randint(horizontal_margin)
                     window[:, margin_start:(margin_start + cutout.shape[1]), :] = cutout
 
