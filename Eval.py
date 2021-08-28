@@ -73,6 +73,9 @@ def read_label_file(file_name):
 
 
 def run_eval(sample, edge_type="single_canny"):
+    log_file = open("eval_results_{}.txt".format(edge_type), 'x')
+    log_file.write("Starting evaluation for {}...\n".format(edge_type))
+
     if edge_type == "multi_canny":
         weight_file = "bin_classifier_weights_multi.h5"
     elif edge_type == "rgb_canny":
@@ -112,19 +115,25 @@ def run_eval(sample, edge_type="single_canny"):
                     num_predicted, num_missed = get_num_matching_predictions(ground_truths, limited_predictions, iou_threshold=iou)
                     true_positives[iou_idx][lim_idx] += num_predicted
                     false_negatives[iou_idx][lim_idx] += num_missed
-
     print("-------------------------{}--------------------------------".format(edge_type))
+    log_file.write("-------------------------{}--------------------------------\n".format(edge_type))
     print("Average number of proposals: {}".format(float(num_proposals) / float(len(sample))))
+    log_file.write("Average number of proposals: {}\n".format(float(num_proposals) / float(len(sample))))
     for iou_idx, iou in enumerate(ious):
         print("-----------------------IOU: {}--------------------------".format(iou))
+        log_file.write("-----------------------IOU: {}--------------------------\n".format(iou))
         for lim_idx, lim in enumerate(limits):
             if true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx] > 0:
                 recall = float(true_positives[iou_idx][lim_idx]) / float(true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx])
             else:
                 recall = 0.0
             print("Recall for limit {}: {}".format(lim, recall))
-    print("Elapsed time: {}".format(print(time.process_time() - start)))
-    print("------------------------------------------------------------------------")
+            log_file.write("Recall for limit {}: {}\n".format(lim, recall))
+    print("Elapsed time: {} minutes".format(round(float(time.process_time() - start) / 60.0)))
+    log_file.write("Elapsed time: {} minutes\n".format(round(float(time.process_time() - start) / 60.0)))
+    print("--------------------------------------------------------------------")
+    log_file.write("--------------------------------------------------------------------\n")
+    log_file.close()
 
 
 if __name__ == "__main__":
