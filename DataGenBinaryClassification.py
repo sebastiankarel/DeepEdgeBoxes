@@ -147,15 +147,17 @@ class DataGenerator(tf.keras.utils.Sequence):
                 if not self.multi_channel and not self.rgb:
                     cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], 1))
 
-                # Place image region centred on square black background
+                # Place image region randomly placed on square black background
                 if cutout.shape[1] > cutout.shape[0]:
                     window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
-                    margin = int((window.shape[0] - cutout.shape[0]) / 2)
-                    window[margin:(margin + cutout.shape[0]), :, :] = cutout
+                    vertical_margin = int(window.shape[0] - cutout.shape[0])
+                    margin_top = np.random.randint(vertical_margin)
+                    window[margin_top:(margin_top + cutout.shape[0]), :, :] = cutout
                 else:
                     window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
-                    margin = int((window.shape[1] - cutout.shape[1]) / 2)
-                    window[:, margin:(margin + cutout.shape[1]), :] = cutout
+                    horizontal_margin = int((window.shape[1] - cutout.shape[1]) / 2)
+                    margin_start = np.random.randint(horizontal_margin)
+                    window[:, margin_start:(margin_start + cutout.shape[1]), :] = cutout
 
                 window = cv2.resize(window, (self.image_width, self.image_height))
             window = np.array(window, dtype=np.float)

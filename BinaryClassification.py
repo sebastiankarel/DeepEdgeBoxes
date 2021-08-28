@@ -83,7 +83,7 @@ class Classification:
                 batch_size,
                 self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
 
-        es = keras.callbacks.EarlyStopping(monitor='val_recall', min_delta=0, patience=5, verbose=0, mode='auto')
+        es = keras.callbacks.EarlyStopping(monitor='val_precision', min_delta=0, patience=5, verbose=0, mode='auto')
         history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs, callbacks=[es])
         model.save_weights(self.weight_file, overwrite=True)
         return history
