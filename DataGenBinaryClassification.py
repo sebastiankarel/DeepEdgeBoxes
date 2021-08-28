@@ -151,12 +151,18 @@ class DataGenerator(tf.keras.utils.Sequence):
                 if cutout.shape[1] > cutout.shape[0]:
                     window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
                     vertical_margin = int(window.shape[0] - cutout.shape[0])
-                    margin_top = np.random.randint(vertical_margin)
+                    if vertical_margin > 0:
+                        margin_top = np.random.randint(vertical_margin)
+                    else:
+                        margin_top = 0
                     window[margin_top:(margin_top + cutout.shape[0]), :, :] = cutout
                 else:
                     window = np.zeros((cutout.shape[0], cutout.shape[0], self.channels))
                     horizontal_margin = int(window.shape[1] - cutout.shape[1])
-                    margin_start = np.random.randint(horizontal_margin)
+                    if horizontal_margin > 0:
+                        margin_start = np.random.randint(horizontal_margin)
+                    else:
+                        margin_start = 0
                     window[:, margin_start:(margin_start + cutout.shape[1]), :] = cutout
 
                 window = cv2.resize(window, (self.image_width, self.image_height))
