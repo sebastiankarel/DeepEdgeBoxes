@@ -28,7 +28,7 @@ def compute_iou(ground_truth, prediction):
 
 def get_best_n(predictions, limits):
     result = []
-    predictions = sorted(predictions, key=lambda x: x[4])
+    predictions = sorted(predictions, key=lambda x: x[4], reverse=True)
     for limit in limits:
         if len(predictions) > limit:
             result.append(predictions[:limit])
