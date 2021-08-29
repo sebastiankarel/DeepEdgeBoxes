@@ -134,6 +134,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                         else:
                             cutout = cv2.flip(cutout, 1)
 
+                cutout = np.reshape(cutout, (cutout.shape[0], cutout.shape[1], self.channels))
                 # Place image region randomly placed on square black background
                 if cutout.shape[1] > cutout.shape[0]:
                     window = np.zeros((cutout.shape[1], cutout.shape[1], self.channels))
@@ -152,10 +153,10 @@ class DataGenerator(tf.keras.utils.Sequence):
                         margin_start = 0
                     window[:, margin_start:(margin_start + cutout.shape[1]), :] = cutout
 
-                window = cv2.resize(window, (self.image_width, self.image_height))
+            window = cv2.resize(window, (self.image_width, self.image_height))
+            window = np.reshape(window, (window.shape[0], window.shape[1], self.channels))
             window = np.array(window, dtype=np.float)
             window /= 255.0
-            window = np.reshape(window, (window.shape[0], window.shape[1], 1))
 
             x[i] = window
             y[i] = label
