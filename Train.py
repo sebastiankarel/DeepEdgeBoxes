@@ -92,7 +92,7 @@ def run_training(edge_type, batch_size, max_epochs=50):
     ax3.legend(["Train", "Validation"], loc="upper left")
 
     fig.tight_layout()
-    fig.savefig("training_output/{}_bin_nopretrain.png".format(edge_type))
+    fig.savefig("training_output/{}.png".format(edge_type))
 
 
 if __name__ == "__main__":

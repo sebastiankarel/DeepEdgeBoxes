@@ -2,9 +2,13 @@ import cv2 as cv
 import os
 import numpy as np
 
-# https://github.com/opencv/opencv/blob/master/samples/dnn/edge_detection.py
-# https://www.pyimagesearch.com/2019/03/04/holistically-nested-edge-detection-with-opencv-and-deep-learning/
-# Caffe model https://github.com/s9xie/hed
+'''
+Source for HED implementation:
+
+https://github.com/opencv/opencv/blob/master/samples/dnn/edge_detection.py
+https://www.pyimagesearch.com/2019/03/04/holistically-nested-edge-detection-with-opencv-and-deep-learning/
+Caffe model https://github.com/s9xie/hed
+'''
 
 
 class CropLayer(object):
