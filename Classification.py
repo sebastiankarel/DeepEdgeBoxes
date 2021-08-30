@@ -1,6 +1,8 @@
 import keras
 from DataGenBinaryClassification import DataGenerator
 from DataGenBinaryClassificationHED import DataGenerator as DataGenHed
+from DataGenClassification import DataGenerator as DataGeneratorMulti
+from DataGenClassificationHED import DataGenerator as DataGenHedMulti
 import os
 import cv2
 import numpy as np
@@ -21,7 +23,8 @@ class Classification:
         else:
             self.hed = None
 
-    def __get_model(self, load_weights=True):
+    def __get_model(self, load_pretrained=False, multi_class=False):
+        fe_trainable = multi_class or not load_pretrained
         if self.use_hed:
             channels = 1
         else:
@@ -30,58 +33,89 @@ class Classification:
             else:
                 channels = 1
         model = keras.models.Sequential()
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, channels), trainable=False))
-        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2"))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_1", input_shape=(self.image_height, self.image_width, channels), trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv_1_2", trainable=fe_trainable))
         model.add(keras.layers.MaxPool2D(name="max_pool_1"))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1"))
-        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2"))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_1", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', name="conv_2_2", trainable=fe_trainable))
         model.add(keras.layers.MaxPool2D(name="max_pool_2"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2"))
-        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3"))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_1", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_2", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', name="conv_3_3", trainable=fe_trainable))
         model.add(keras.layers.MaxPool2D(name="max_pool_3"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_1", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_2", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_4_3", trainable=fe_trainable))
         model.add(keras.layers.MaxPool2D(name="max_pool_4"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2"))
-        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3"))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_1", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_2", trainable=fe_trainable))
+        model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', name="conv_5_3", trainable=fe_trainable))
         model.add(keras.layers.MaxPool2D(name="max_pool_5"))
         model.add(keras.layers.Flatten(name="flatten"))
-        model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_bin_class_1"))
-        model.add(keras.layers.Dense(units=512, activation='relu', name="dense_bin_class_2"))
-        model.add(keras.layers.Dense(units=1, activation='sigmoid', name="out_bin_class"))
-        model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.binary_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
-        if load_weights:
+        if multi_class:
+            model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_multi_class_1"))
+            model.add(keras.layers.Dense(units=512, activation='relu', name="dense_multi_class_2"))
+            model.add(keras.layers.Dense(units=21, activation='softmax', name='out_multi_class'))
+            model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.categorical_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        else:
+            model.add(keras.layers.Dense(units=1024, activation='relu', name="dense_bin_class_1"))
+            model.add(keras.layers.Dense(units=512, activation='relu', name="dense_bin_class_2"))
+            model.add(keras.layers.Dense(units=1, activation='sigmoid', name="out_bin_class"))
+            model.compile(optimizer=keras.optimizers.Adam(lr=0.0001), loss=keras.losses.binary_crossentropy, metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+        model.summary()
+        if load_pretrained:
             if os.path.isfile(self.weight_file):
-                model.load_weights(self.weight_file)
+                model.load_weights(self.weight_file, by_name=True)
         return model
 
-    def train_model(self, train_labels_dir, train_images_dir, val_labels_dir, val_images_dir, epochs, batch_size, load_weights):
-        model = self.__get_model(load_weights)
+    def train_model(self, train_labels_dir, train_images_dir, val_labels_dir, val_images_dir, epochs, batch_size, load_pretrained, multi_class):
+        model = self.__get_model(load_pretrained, multi_class)
         if self.use_hed:
-            training_generator = DataGenHed(
-                train_images_dir,
-                train_labels_dir,
-                batch_size,
-                self.image_width, self.image_height, True)
-            val_generator = DataGenHed(
-                val_images_dir,
-                val_labels_dir,
-                batch_size,
-                self.image_width, self.image_height, False)
+            if multi_class:
+                training_generator = DataGenHedMulti(
+                    train_images_dir,
+                    train_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, True)
+                val_generator = DataGenHedMulti(
+                    val_images_dir,
+                    val_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, False)
+            else:
+                training_generator = DataGenHed(
+                    train_images_dir,
+                    train_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, True)
+                val_generator = DataGenHed(
+                    val_images_dir,
+                    val_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, False)
         else:
-            training_generator = DataGenerator(
-                train_images_dir,
-                train_labels_dir,
-                batch_size,
-                self.image_width, self.image_height, True, self.use_multichannel, self.use_rgb)
-            val_generator = DataGenerator(
-                val_images_dir,
-                val_labels_dir,
-                batch_size,
-                self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
+            if multi_class:
+                training_generator = DataGeneratorMulti(
+                    train_images_dir,
+                    train_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, True, self.use_multichannel, self.use_rgb)
+                val_generator = DataGeneratorMulti(
+                    val_images_dir,
+                    val_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
+            else:
+                training_generator = DataGenerator(
+                    train_images_dir,
+                    train_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, True, self.use_multichannel, self.use_rgb)
+                val_generator = DataGenerator(
+                    val_images_dir,
+                    val_labels_dir,
+                    batch_size,
+                    self.image_width, self.image_height, False, self.use_multichannel, self.use_rgb)
 
         es = keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=0, mode='auto', restore_best_weights=True)
         history = model.fit(x=training_generator, validation_data=val_generator, use_multiprocessing=False, epochs=epochs, callbacks=[es])

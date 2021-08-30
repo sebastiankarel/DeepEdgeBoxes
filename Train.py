@@ -1,5 +1,5 @@
 import tensorflow as tf
-from BinaryClassification import Classification
+from Classification import Classification
 import sys
 import matplotlib.pyplot as plt
 
@@ -11,7 +11,7 @@ def init_tf_gpu():
     tf.compat.v1.keras.backend.set_session(sess)
 
 
-def run_training(edge_type, batch_size, max_epochs=50):
+def run_training(edge_type, batch_size, max_epochs=50, multi_class=False, load_pretrained=False):
     print("Read training configs.txt")
     file = open("train_configs.txt", "r")
     lines = file.readlines()
@@ -22,13 +22,13 @@ def run_training(edge_type, batch_size, max_epochs=50):
     val_labels_dir = ""
 
     if edge_type == "multi_canny":
-        weight_file = "bin_classifier_weights_multi.h5"
+        weight_file = "weights_multi.h5"
     elif edge_type == "rgb_canny":
-        weight_file = "bin_classifier_weights_rgb.h5"
+        weight_file = "weights_rgb.h5"
     elif edge_type == "hed":
-        weight_file = "bin_classifier_weights_hed.h5"
+        weight_file = "weights_hed.h5"
     else:
-        weight_file = "bin_classifier_weights.h5"
+        weight_file = "weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -65,7 +65,8 @@ def run_training(edge_type, batch_size, max_epochs=50):
         val_images_dir.strip(),
         max_epochs,
         batch_size,
-        False
+        load_pretrained,
+        multi_class
     )
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
@@ -92,7 +93,10 @@ def run_training(edge_type, batch_size, max_epochs=50):
     ax3.legend(["Train", "Validation"], loc="upper left")
 
     fig.tight_layout()
-    fig.savefig("training_output/{}.png".format(edge_type))
+    if multi_class:
+        fig.savefig("training_output/{}_multiclass.png".format(edge_type))
+    else:
+        fig.savefig("training_output/{}.png".format(edge_type))
 
 
 if __name__ == "__main__":
@@ -108,9 +112,9 @@ if __name__ == "__main__":
             else:
                 print("Unknown argument {}. Ignoring it.".format(split[0]))
 
-    run_training("single_canny", batch_size=18)
-    run_training("multi_canny", batch_size=18)
-    run_training("rgb_canny", batch_size=18)
-    run_training("hed", batch_size=18)
+    run_training("single_canny", batch_size=18, multi_class=False, load_pretrained=False)
+    run_training("multi_canny", batch_size=18, multi_class=False, load_pretrained=False)
+    run_training("rgb_canny", batch_size=18, multi_class=False, load_pretrained=False)
+    run_training("hed", batch_size= 18, multi_class=False, load_pretrained=False)
 
     print("Done.")

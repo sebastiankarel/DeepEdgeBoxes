@@ -10,7 +10,7 @@
 !DataGenerationClassificationHED.py
 !TrainClassification.py
 !train_configs.txt
-!BinaryClassification.py
+!Classification.py
 !DataGenBinaryClassification.py
 !DataGenBinaryClassificationHED.py
 !Train.py

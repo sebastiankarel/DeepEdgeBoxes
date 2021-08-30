@@ -1,5 +1,5 @@
 import tensorflow as tf
-from BinaryClassification import Classification
+from Classification import Classification
 import sys
 import os
 import cv2
