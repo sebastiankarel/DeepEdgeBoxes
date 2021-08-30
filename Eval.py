@@ -124,7 +124,7 @@ def run_eval(sample, edge_type="single_canny"):
         log_file.write("-----------------------IOU: {}--------------------------\n".format(iou))
         for lim_idx, lim in enumerate(limits):
             if true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx] > 0:
-                recall = float(true_positives[iou_idx][lim_idx]) / float(true_positives[iou_idx][lim_idx] + false_negatives[iou_idx][lim_idx])
+                recall = float(true_positives[iou_idx][lim_idx]) / (float(true_positives[iou_idx][lim_idx] + float(false_negatives[iou_idx][lim_idx])))
             else:
                 recall = 0.0
             print("Recall for limit {}: {}".format(lim, recall))
