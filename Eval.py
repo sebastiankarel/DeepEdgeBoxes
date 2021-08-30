@@ -77,13 +77,13 @@ def run_eval(sample, edge_type="single_canny"):
     log_file.write("Starting evaluation for {}...\n".format(edge_type))
 
     if edge_type == "multi_canny":
-        weight_file = "bin_classifier_weights_multi.h5"
+        weight_file = "classifier_weights_multi.h5"
     elif edge_type == "rgb_canny":
-        weight_file = "bin_classifier_weights_rgb.h5"
+        weight_file = "classifier_weights_rgb.h5"
     elif edge_type == "hed":
-        weight_file = "bin_classifier_weights_hed.h5"
+        weight_file = "classifier_weights_hed.h5"
     else:
-        weight_file = "bin_classifier_weights.h5"
+        weight_file = "classifier_weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
