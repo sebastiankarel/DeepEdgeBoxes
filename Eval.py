@@ -95,6 +95,7 @@ def run_eval(sample, edge_type="single_canny"):
         hed = None
 
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+    classifier.set_model_for_prediction()
 
     start = time.process_time()
     ious = [0.7, 0.6, 0.5, 0.4, 0.3]
@@ -162,9 +163,9 @@ if __name__ == "__main__":
 
     print("Starting Evaluation...")
 
-    run_eval(sample, "single_canny")
-    run_eval(sample, "multi_canny")
-    run_eval(sample, "rgb_canny")
+    #run_eval(sample, "single_canny")
+    #run_eval(sample, "multi_canny")
+    #run_eval(sample, "rgb_canny")
     run_eval(sample, "hed")
 
     print("Done.")

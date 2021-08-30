@@ -18,6 +18,7 @@ class Classification:
         self.use_hed = use_hed
         self.use_multichannel = use_multichannel
         self.use_rgb = use_rgb
+        self.model = None
         if use_hed:
             self.hed = hed
         else:
@@ -122,6 +123,10 @@ class Classification:
         model.save_weights(self.weight_file, overwrite=True)
         return history
 
+    def set_model_for_prediction(self):
+        self.model = self.__get_model()
+        self.model.load_weights(self.weight_file)
+
     def predict(self, image, threshold=0.5):
         orig_width = image.shape[1]
         orig_height = image.shape[0]
@@ -152,8 +157,7 @@ class Classification:
 
         # Run exhaustive sliding window
         result = []
-        model = self.__get_model()
-        model.load_weights(self.weight_file)
+        model = self.model
         window_width = self.image_width
         window_height = self.image_height
         scales = range(1, 8)
