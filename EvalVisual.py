@@ -76,17 +76,13 @@ if __name__ == "__main__":
     original_images_dir = ""
 
     if edge_type == "multi_canny":
-        weight_file = "bin_classifier_weights_multi.h5"
-        class_weight_file = "classifier_weights_multi.h5"
+        weight_file = "weights_multi.h5"
     elif edge_type == "rgb_canny":
-        weight_file = "bin_classifier_weights_rgb.h5"
-        class_weight_file = "classifier_weights_rgb.h5"
+        weight_file = "weights_rgb.h5"
     elif edge_type == "hed":
-        weight_file = "bin_classifier_weights_hed.h5"
-        class_weight_file = "classifier_weights_hed.h5"
+        weight_file = "weights_hed.h5"
     else:
-        weight_file = "bin_classifier_weights.h5"
-        class_weight_file = "classifier_weights.h5"
+        weight_file = "weights.h5"
 
     use_hed = edge_type == "hed"
     use_multi = edge_type == "multi_canny"
@@ -102,6 +98,8 @@ if __name__ == "__main__":
 
     hed = HED()
     classifier = Classification(224, 224, weight_file=weight_file, use_hed=use_hed, use_multichannel=use_multi, use_rgb=use_rgb, hed=hed)
+    classifier.set_model_for_prediction()
+
     print("Starting evaluation")
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
