@@ -163,9 +163,9 @@ if __name__ == "__main__":
 
     print("Starting Evaluation...")
 
-    #run_eval(sample, "single_canny")
-    #run_eval(sample, "multi_canny")
-    #run_eval(sample, "rgb_canny")
+    run_eval(sample, "single_canny")
+    run_eval(sample, "multi_canny")
+    run_eval(sample, "rgb_canny")
     run_eval(sample, "hed")
 
     print("Done.")

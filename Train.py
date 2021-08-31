@@ -112,9 +112,9 @@ if __name__ == "__main__":
             else:
                 print("Unknown argument {}. Ignoring it.".format(split[0]))
 
-    run_training("single_canny", batch_size=18, multi_class=False, load_pretrained=False)
-    run_training("multi_canny", batch_size=18, multi_class=False, load_pretrained=False)
-    run_training("rgb_canny", batch_size=18, multi_class=False, load_pretrained=False)
-    run_training("hed", batch_size= 18, multi_class=False, load_pretrained=False)
+    run_training("single_canny", batch_size=18, multi_class=False, load_pretrained=True)
+    run_training("multi_canny", batch_size=18, multi_class=False, load_pretrained=True)
+    run_training("rgb_canny", batch_size=18, multi_class=False, load_pretrained=True)
+    run_training("hed", batch_size= 18, multi_class=False, load_pretrained=True)
 
     print("Done.")
