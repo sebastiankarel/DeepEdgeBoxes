@@ -127,7 +127,7 @@ class Classification:
         self.model = self.__get_model()
         self.model.load_weights(self.weight_file)
 
-    def predict(self, image, threshold=0.05):
+    def predict(self, image, threshold=0.2):
         orig_width = image.shape[1]
         orig_height = image.shape[0]
 
@@ -161,7 +161,7 @@ class Classification:
         window_width = self.image_width
         window_height = self.image_height
         scales = range(1, 8)
-        overlap = 0.5
+        overlap=0.5
         for scale in scales:
             image_width = round(scale * window_width)
             image_height = round(scale * window_height)
@@ -196,7 +196,49 @@ class Classification:
                         window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
                         result.append(window_result)
 
-                    # Try to apply horizontal window
+                    # Apply narrow horizontal window
+                    xmin = int(x_offset)
+                    xmax = int(x_offset + window_width)
+                    ymin = int(y_offset + (window_width / 4))
+                    ymax = int(y_offset + (window_height / 2))
+                    window = resized_image[ymin:ymax, xmin:xmax]
+                    window = cv2.resize(window, (self.image_width, self.image_height))  # Make square to fit classifier
+                    if self.use_multichannel or self.use_rgb:
+                        window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                    else:
+                        window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                    window = window / 255.0
+                    prediction = model.predict(window, 1)[0]
+                    if prediction >= threshold:
+                        true_xmin = int(x_offset * resize_x)
+                        true_ymin = int((y_offset + (window_height / 4)) * resize_y)
+                        true_xmax = true_xmin + int(window_width * resize_x)
+                        true_ymax = true_ymin + int((window_height / 2) * resize_y)
+                        window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                        result.append(window_result)
+
+                    # Apply narrow vertical window
+                    xmin = int(x_offset + (window_width / 4))
+                    xmax = int(x_offset + (window_width / 2))
+                    ymin = int(y_offset)
+                    ymax = int(y_offset + window_height)
+                    window = resized_image[ymin:ymax, xmin:xmax]
+                    window = cv2.resize(window, (self.image_width, self.image_height))  # Make square to fit classifier
+                    if self.use_multichannel or self.use_rgb:
+                        window = np.reshape(window, (1, window.shape[0], window.shape[1], window.shape[2]))
+                    else:
+                        window = np.reshape(window, (1, window.shape[0], window.shape[1], 1))
+                    window = window / 255.0
+                    prediction = model.predict(window, 1)[0]
+                    if prediction >= threshold:
+                        true_xmin = int((x_offset + (window_width / 4)) * resize_x)
+                        true_ymin = int(y_offset * resize_y)
+                        true_xmax = true_xmin + int((window_width / 2) * resize_x)
+                        true_ymax = true_ymin + int(window_height * resize_y)
+                        window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
+                        result.append(window_result)
+
+                    # Try to apply large horizontal window
                     xmin = int(x_offset - (window_width / 2))
                     xmax = int(x_offset + window_width + (window_width / 2))
                     ymin = int(y_offset)
@@ -218,7 +260,7 @@ class Classification:
                             window_result = [true_xmin, true_ymin, true_xmax, true_ymax, prediction]
                             result.append(window_result)
 
-                    # Try to apply vertical window
+                    # Try to apply large vertical window
                     xmin = int(x_offset)
                     xmax = int(x_offset + window_width)
                     ymin = int(y_offset - (window_height / 2))
