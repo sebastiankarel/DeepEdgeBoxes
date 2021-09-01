@@ -140,8 +140,6 @@ def run_eval(sample, edge_type="single_canny"):
 if __name__ == "__main__":
     init_tf_gpu()
 
-    sample_size = 100
-
     print("Read eval_configs.txt")
     file = open("eval_configs.txt", "r")
     lines = file.readlines()
@@ -159,13 +157,12 @@ if __name__ == "__main__":
     test_images_dir = test_images_dir.strip()
     test_labels_dir = test_labels_dir.strip()
     labels = os.listdir(test_labels_dir)
-    sample = random.sample(labels, sample_size)
 
     print("Starting Evaluation...")
 
-    run_eval(sample, "single_canny")
-    run_eval(sample, "multi_canny")
-    run_eval(sample, "rgb_canny")
-    run_eval(sample, "hed")
+    run_eval(labels, "single_canny")
+    run_eval(labels, "multi_canny")
+    run_eval(labels, "rgb_canny")
+    run_eval(labels, "hed")
 
     print("Done.")

@@ -127,7 +127,7 @@ class Classification:
         self.model = self.__get_model()
         self.model.load_weights(self.weight_file)
 
-    def predict(self, image, threshold=0.2):
+    def predict(self, image, threshold=0.5):
         orig_width = image.shape[1]
         orig_height = image.shape[0]
 
